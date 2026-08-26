@@ -1,0 +1,13 @@
+quantity,value
+records scored by both models,60952
+raw inter-model agreement,0.9929
+Cohen's kappa,0.3433
+PABAK,0.9858
+both include,115
+only gemma includes,338
+only llama includes,96
+both exclude,60403
+contested set size,434
+contested as % of ensemble includes,78.9
+"self-consistency, gemma4:e4b",1
+"self-consistency, llama3:latest",1

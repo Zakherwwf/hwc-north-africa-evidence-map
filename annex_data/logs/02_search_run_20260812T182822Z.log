@@ -1,0 +1,62 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘tibble’ was built under R version 4.4.3 
+2: package ‘dplyr’ was built under R version 4.4.3 
+Warning message:
+package ‘httr’ was built under R version 4.4.3 
+[1/16] openalex_en_TN  (language=en, country=Tunisia)
+     -> 8879 records
+[2/16] openalex_en_DZ  (language=en, country=Algeria)
+     -> 9043 records
+[3/16] openalex_en_MA  (language=en, country=Morocco)
+     -> 13239 records
+[4/16] openalex_en_LY  (language=en, country=Libya)
+     -> 6205 records
+[5/16] openalex_en_EG  (language=en, country=Egypt)
+     -> 42114 records
+[6/16] openalex_en_REGION  (language=en, country=Region)
+     -> 15828 records
+[7/16] openalex_fr_ALL  (language=fr, country=ALL)
+     -> 2 records
+[8/16] openalex_ar_ALL  (language=ar, country=ALL)
+     -> 0 records
+[9/16] core_en_TN  (language=en, country=Tunisia)
+     -> 34 records
+[10/16] core_en_DZ  (language=en, country=Algeria)
+     -> 15 records
+[11/16] core_en_MA  (language=en, country=Morocco)
+     -> 23 records
+[12/16] core_en_LY  (language=en, country=Libya)
+     -> 13 records
+[13/16] core_en_EG  (language=en, country=Egypt)
+     -> 49 records
+[14/16] core_en_REGION  (language=en, country=Region)
+     -> 102 records
+[15/16] core_fr_ALL  (language=fr, country=ALL)
+     -> 0 records
+[16/16] core_ar_ALL  (language=ar, country=ALL)
+     -> 0 records
+
+=== per-cell counts ===
+# A tibble: 13 × 3
+   cell_id            source   n_records
+   <chr>              <chr>        <int>
+ 1 core_en_DZ         core            15
+ 2 core_en_EG         core            49
+ 3 core_en_LY         core            13
+ 4 core_en_MA         core            23
+ 5 core_en_REGION     core           102
+ 6 core_en_TN         core            34
+ 7 openalex_en_DZ     openalex      9043
+ 8 openalex_en_EG     openalex     42114
+ 9 openalex_en_LY     openalex      6205
+10 openalex_en_MA     openalex     13239
+11 openalex_en_REGION openalex     15828
+12 openalex_en_TN     openalex      8879
+13 openalex_fr_ALL    openalex         2
+
+Total raw ledger rows (pre-dedup): 95546
+Ledger written: /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/search_ledger.rds

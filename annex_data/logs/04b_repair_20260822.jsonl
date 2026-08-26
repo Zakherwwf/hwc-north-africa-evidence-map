@@ -1,0 +1,4 @@
+{"event":"repair_start","n_votes":498,"n_records":156,"models":["gemma4:e4b","llama3:latest"],"polarity":"affirmative","criteria_hash":"e021124a22ce6e9d","when":"2026-08-22 23:51:41"} 
+{"event":"repair_unrecoverable","record_id":"https://openalex.org/W2908415939","model":"llama3:latest","run_idx":1,"error":"HTTP no-response","abstract_chars":21068,"when":"2026-08-23 00:09:35"} 
+{"event":"repair_unrecoverable","record_id":"https://openalex.org/W2908415939","model":"llama3:latest","run_idx":2,"error":"HTTP no-response","abstract_chars":21068,"when":"2026-08-23 00:24:47"} 
+{"event":"repair_checkpoint","done":25,"total":498,"repaired":23,"unrecoverable":2,"elapsed_min":35.7,"when":"2026-08-23 00:27:24"} 

@@ -1,0 +1,47 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘httr’ was built under R version 4.4.3 
+2: package ‘pdftools’ was built under R version 4.4.3 
+3: package ‘xml2’ was built under R version 4.4.3 
+GROBID alive at http://localhost:8070
+Records to retrieve: 550
+  [40/550] 4.7 min elapsed, ETA 60.3 min
+  [50/550] 6.7 min elapsed, ETA 67.5 min
+  [60/550] 8.8 min elapsed, ETA 71.5 min
+  [90/550] 14.0 min elapsed, ETA 71.6 min
+  [100/550] 15.3 min elapsed, ETA 69.0 min
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+PDF error: Mismatch between font type and embedded font file
+  [110/550] 16.6 min elapsed, ETA 66.4 min
+  [120/550] 19.4 min elapsed, ETA 69.4 min
+PDF error: Unknown Metadata type: 'XMP'
+  [140/550] 22.8 min elapsed, ETA 66.8 min
+  [180/550] 44.3 min elapsed, ETA 91.1 min
+  [200/550] 46.1 min elapsed, ETA 80.6 min
+  [220/550] 49.4 min elapsed, ETA 74.0 min
+  [230/550] 51.0 min elapsed, ETA 71.0 min
+  [240/550] 53.2 min elapsed, ETA 68.7 min
+  [260/550] 59.4 min elapsed, ETA 66.2 min
+Error in if (!is.na(ra) && ra > 0) min(ra, 120) else 10 * attempt : 
+  missing value where TRUE/FALSE needed
+Calls: download_pdf -> Sys.sleep
+In addition: Warning messages:
+1: In readChar(dest, min(file.size(dest), 300000L), useBytes = TRUE) :
+  truncating string with embedded nuls
+2: In readChar(dest, min(file.size(dest), 300000L), useBytes = TRUE) :
+  truncating string with embedded nuls
+Execution halted

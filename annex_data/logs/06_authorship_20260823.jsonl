@@ -1,0 +1,7 @@
+{"event":"batch_ok","filter":"openalex_id","n":50,"returned":50,"when":"2026-08-23 17:50:19"} 
+{"event":"batch_ok","filter":"openalex_id","n":50,"returned":50,"when":"2026-08-23 17:50:20"} 
+{"event":"batch_ok","filter":"openalex_id","n":50,"returned":50,"when":"2026-08-23 17:50:20"} 
+{"event":"batch_ok","filter":"openalex_id","n":50,"returned":50,"when":"2026-08-23 17:50:21"} 
+{"event":"batch_ok","filter":"openalex_id","n":50,"returned":50,"when":"2026-08-23 17:50:23"} 
+{"event":"batch_ok","filter":"openalex_id","n":4,"returned":4,"when":"2026-08-23 17:50:23"} 
+{"event":"run_done","n":262,"with_authorship":249,"with_countries":207,"first_incountry":83,"last_incountry":82,"credits_used":0,"when":"2026-08-23 17:51:12"} 

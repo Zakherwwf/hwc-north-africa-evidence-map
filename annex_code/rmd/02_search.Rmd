@@ -1,0 +1,128 @@
+---
+title: "Module 02 — Search execution and ledger"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr)
+})
+source(here::here("R", "config.R"))
+source(here::here("R", "eligibility.R"))
+source(here::here("R", "search_terms.R"))
+```
+
+# What ran, and when
+
+The full search matrix is executed by `R/run_searches.R` and cached at
+`data/raw/search/*.rds`. This knit **only reads the cache** — it does not
+issue API requests. If a cell file is missing, the corresponding row will
+report zero and the reader will know to re-run the runner.
+
+```{r read-ledger}
+ledger_path <- here::here(DIR_DERIVED, "search_ledger.rds")
+stopifnot("search_ledger.rds not found — run Rscript R/run_searches.R first" =
+          file.exists(ledger_path))
+ledger <- readRDS(ledger_path)
+cat("Ledger rows (raw, pre-dedup):", NROW(ledger), "\n")
+cat("Ledger written:              ", format(file.info(ledger_path)$mtime), "\n")
+```
+
+# Search cells and their sizes
+
+Cell design: per-country English searches on each source; one pooled French
+cell per source (French geography terms cover all 5 countries); one pooled
+Arabic cell per source with the transliteration decisions documented in
+`R/search_terms.R`.
+
+```{r per-cell}
+per_cell <- ledger |>
+  dplyr::count(cell_id, source, name = "n_records") |>
+  dplyr::arrange(cell_id)
+knitr::kable(per_cell)
+```
+
+# Source × language cross-tab
+
+```{r source-lang}
+lang_from_cell <- function(x) sub("^[a-z]+_(.*?)_.*", "\\1", x)
+country_from_cell <- function(x) sub("^[a-z]+_[a-z]{2}_", "", x)
+ledger_tab <- ledger |>
+  dplyr::mutate(lang = lang_from_cell(cell_id),
+                country_code = country_from_cell(cell_id))
+xt <- ledger_tab |>
+  dplyr::count(source, lang, name = "n") |>
+  tidyr::pivot_wider(names_from = lang, values_from = n, values_fill = 0L)
+knitr::kable(xt, caption = "Records per source × language (pre-dedup)")
+```
+
+# Coverage sanity — the two anchor findings
+
+The protocol names two known-good North Africa results. Both must appear in
+the ledger. If they don't, either the search grammar is broken or the
+databases are unreachable.
+
+```{r anchors}
+anchor_boar <- ledger |>
+  dplyr::filter(grepl("Tunisia", title, ignore.case = TRUE),
+                grepl("boar|Sus scrofa", title, ignore.case = TRUE))
+anchor_turtle <- ledger |>
+  dplyr::filter(grepl("Gabes|Gabès|Mediterran", title, ignore.case = TRUE),
+                grepl("turtle|Caretta|bycatch|by-catch", title,
+                      ignore.case = TRUE))
+data.frame(
+  anchor      = c("Tunisia + wild boar (in title)",
+                  "Gulf of Gabès / Mediterranean turtle bycatch (in title)"),
+  n_matches   = c(NROW(anchor_boar), NROW(anchor_turtle))
+)
+```
+
+```{r anchors-top, results='asis'}
+cat("### Sample boar-in-Tunisia matches (first 3):\n\n")
+knitr::kable(head(anchor_boar |>
+                  dplyr::select(publication_year, source, title), 3))
+cat("\n### Sample turtle-bycatch matches (first 3):\n\n")
+knitr::kable(head(anchor_turtle |>
+                  dplyr::select(publication_year, source, title), 3))
+```
+
+# What is *not* in the ledger, and why
+
+- **Crossref** — omitted 2026-08-12 by user direction. Rationale: Crossref
+  is largely a DOI-authoritative subset of what OpenAlex already returns
+  after DOI matching, and the marginal recall gain does not justify the
+  extra rate-limit budget for a scoping study.
+- **BASE / OpenAIRE (grey literature)** — deferred. Grey literature will
+  be added as a separate stratum in a later commit; the protocol requires
+  it be kept out of headline counts anyway.
+- **Machine translation of English queries into French/Arabic** — never
+  done, per protocol. Both non-English cells use human-selected terms.
+
+# Query provenance
+
+Every search cell's exact query, timing, and record count is appended to
+`logs/02_search_YYYYMMDD.jsonl`. This is how the methods paragraph in
+Module 09 will state the search strings verbatim without any risk of drift.
+
+```{r log-tail}
+today <- format(Sys.Date(), "%Y%m%d")
+log_file <- here::here(DIR_LOGS, sprintf("02_search_%s.jsonl", today))
+if (file.exists(log_file)) {
+  cat("Log:", log_file, "\n")
+  cat("Line count:", length(readLines(log_file)), "\n")
+} else {
+  cat("No log file for today at:", log_file, "\n")
+}
+```
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

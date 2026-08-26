@@ -1,0 +1,7 @@
+{
+  "when": "2026-08-11 12:54:05",
+  "probe": "OpenAlex reachability + North Africa anchor hits",
+  "n_boar_hits": 141,
+  "n_turtle_hits": 68,
+  "openalexR_version": "3.0.1"
+}

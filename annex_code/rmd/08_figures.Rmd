@@ -1,0 +1,220 @@
+---
+title: "Module 08 — Figures"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr)
+  library(ggplot2); library(tidyr)
+})
+source(here::here("R", "config.R"))
+
+# Okabe-Ito: designed for deuteranopia, protanopia and tritanopia, and it
+# survives greyscale printing, which a conference poster may well get.
+OKABE <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442",
+           "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+save_fig <- function(p, name, w = 7, h = 5) {
+  dir.create(here::here(DIR_FIGURES), showWarnings = FALSE, recursive = TRUE)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".png")), p, width = w, height = h, dpi = 300)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".svg")), p, width = w, height = h)
+  p
+}
+```
+
+# The flow diagram
+
+This is an **evidence-map flow diagram**, not a PRISMA-ScR diagram. It follows
+PRISMA's reporting convention of showing every record and every loss, and it
+deliberately does not claim the design: there was no eligibility adjudication
+by a human reviewer at any stage, and two of the boxes hold records that were
+never judged at all.
+
+```{r flow-data}
+flow <- readr::read_csv(here::here(DIR_DERIVED, "record_flow.csv"), show_col_types = FALSE)
+knitr::kable(flow |> dplyr::select(stage, n, removed, removal_reason),
+             caption = "The canonical record flow (R/build_record_flow.R)")
+```
+
+```{r fig-flow, fig.width=9, fig.height=8}
+lab <- flow |>
+  dplyr::mutate(
+    y = rev(seq_len(dplyr::n())),
+    box = sprintf("%s\nn = %s", stage, format(n, big.mark = ",", trim = TRUE)),
+    side = dplyr::if_else(is.na(removed), NA_character_,
+                          sprintf("−%s  %s", format(removed, big.mark = ",", trim = TRUE),
+                                  removal_reason)))
+
+p <- ggplot(lab) +
+  geom_rect(aes(xmin = 0, xmax = 3.1, ymin = y - 0.36, ymax = y + 0.36),
+            fill = "white", colour = "grey25", linewidth = 0.4) +
+  geom_text(aes(x = 1.55, y = y, label = box), size = 3.1, lineheight = 1.05) +
+  geom_segment(data = lab |> dplyr::filter(y > min(y)),
+               aes(x = 1.55, xend = 1.55, y = y - 0.36, yend = y - 0.64),
+               arrow = arrow(length = unit(0.16, "cm"), type = "closed"),
+               linewidth = 0.35, colour = "grey25") +
+  geom_text(data = lab |> dplyr::filter(!is.na(side)),
+            aes(x = 3.35, y = y + 0.5, label = side),
+            hjust = 0, size = 2.7, colour = "grey30") +
+  scale_x_continuous(limits = c(-0.1, 8.1)) +
+  scale_y_continuous(expand = expansion(add = 0.6)) +
+  labs(title = "Evidence-map record flow",
+       subtitle = "Not a PRISMA-ScR diagram: no human reviewer screened records at any stage") +
+  theme_void(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(colour = "grey35", size = 9))
+save_fig(p, "08_record_flow", w = 8.2, h = 8)
+```
+
+# Classifier performance
+
+Putting the validation on the poster is the point. A conference increasingly
+wary of AI-generated evidence should be able to see the measured numbers
+rather than take an assurance.
+
+```{r perf-data}
+vmet <- readr::read_csv(here::here(DIR_DERIVED, "validation_metrics.csv"),
+                        show_col_types = FALSE)
+deployed <- vmet |> dplyr::filter(scope == "abstract_present", polarity == "affirmative")
+knitr::kable(vmet |> dplyr::select(scope, polarity, n, tp, fp, fn, tn,
+                                   sensitivity, specificity, precision, f1),
+             digits = 3, caption = "Ensemble performance on Bannach-Brown_2019 (SYNERGY)")
+```
+
+```{r fig-performance, fig.width=8, fig.height=4.5}
+perf <- vmet |>
+  dplyr::select(scope, polarity, sensitivity, specificity, precision, f1) |>
+  tidyr::pivot_longer(sensitivity:f1, names_to = "metric", values_to = "value") |>
+  dplyr::mutate(
+    scope = dplyr::recode(scope, all = "all records",
+                          abstract_present = "abstract present (deployed)"),
+    metric = factor(metric, c("sensitivity", "specificity", "precision", "f1")))
+
+p <- ggplot(perf, aes(x = metric, y = value, fill = polarity)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.72) +
+  geom_hline(yintercept = TARGET_RECALL, linetype = "dashed", colour = OKABE[6]) +
+  annotate("text", x = 0.6, y = TARGET_RECALL + 0.03,
+           label = sprintf("TARGET_RECALL = %.2f", TARGET_RECALL),
+           hjust = 0, size = 2.9, colour = OKABE[6]) +
+  facet_wrap(~ scope) +
+  scale_fill_manual(values = OKABE[c(1, 5, 3)]) +
+  scale_y_continuous(limits = c(0, 1.05), breaks = seq(0, 1, 0.25)) +
+  labs(x = NULL, y = NULL, fill = "prompt polarity",
+       title = "Ensemble screening performance on an external benchmark",
+       subtitle = sprintf("SYNERGY Bannach-Brown_2019; %s; union decision rule",
+                          paste(ENSEMBLE_MODELS, collapse = " + "))) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 20, hjust = 1))
+save_fig(p, "08_classifier_performance", w = 8, h = 4.5)
+```
+
+```{r perf-ci}
+ci <- binom.test(deployed$tp, deployed$tp + deployed$fn)$conf.int
+```
+
+**The figure without its interval would be misleading.** Deployed sensitivity
+reads `r sprintf("%.3f", deployed$sensitivity)`, but it rests on
+`r deployed$tp + deployed$fn` positive records; the exact 95% interval is
+`r sprintf("%.3f", ci[1])` to `r sprintf("%.3f", ci[2])`. Any poster or slide
+using this figure must carry the interval, and the caption below is written to
+be used verbatim.
+
+```{r fig-performance-ci, fig.width=7, fig.height=3.2}
+cis <- vmet |>
+  dplyr::rowwise() |>
+  dplyr::mutate(lo = binom.test(tp, tp + fn)$conf.int[1],
+                hi = binom.test(tp, tp + fn)$conf.int[2],
+                label = sprintf("%s / %s",
+                                dplyr::recode(scope, all = "all records",
+                                              abstract_present = "abstract present"),
+                                polarity)) |>
+  dplyr::ungroup()
+
+# Axis starts at 0.5, not 0. These are points with intervals rather than bars,
+# so no length is being read as a magnitude, and the whole story lives between
+# 0.64 and 1.00 -- a full-range axis compresses every interval into the right
+# third and hides exactly the uncertainty the figure exists to show.
+p <- ggplot(cis, aes(x = sensitivity, y = reorder(label, sensitivity))) +
+  geom_vline(xintercept = TARGET_RECALL, linetype = "dashed", colour = OKABE[6]) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0.22, colour = "grey40") +
+  geom_point(aes(size = tp + fn), colour = OKABE[5]) +
+  scale_x_continuous(limits = c(0.5, 1.02), breaks = seq(0.5, 1, 0.1)) +
+  scale_size_continuous(range = c(2, 5), name = "positives") +
+  labs(x = "sensitivity (exact 95% CI)", y = NULL,
+       title = "Sensitivity with its uncertainty",
+       subtitle = "The deployed configuration's 1.000 rests on 13 positive records") +
+  theme_minimal(base_size = 11)
+save_fig(p, "08_sensitivity_ci", w = 7, h = 3.2)
+```
+
+# Contested screening decisions
+
+```{r fig-contested, fig.width=7, fig.height=3.6}
+agree <- readr::read_csv(here::here(DIR_TABLES, "04b_model_agreement.csv"),
+                         show_col_types = FALSE)
+.a <- function(q) agree$value[agree$quantity == q]
+cd <- tibble::tibble(
+  outcome = c("both models included", "gemma4:e4b only", "llama3:latest only"),
+  n = c(.a("both include"), .a("only gemma includes"), .a("only llama includes"))) |>
+  dplyr::mutate(outcome = factor(outcome, outcome))
+
+p <- ggplot(cd, aes(x = "", y = n, fill = outcome)) +
+  geom_col(width = 0.55) +
+  geom_text(aes(label = n), position = position_stack(vjust = 0.5), size = 3.4,
+            colour = "white", fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = OKABE[c(3, 6, 2)]) +
+  labs(x = NULL, y = "ensemble includes", fill = NULL,
+       title = "How much of the include set rests on one model",
+       subtitle = sprintf("Cohen's kappa = %.3f between the two models", .a("Cohen's kappa"))) +
+  theme_minimal(base_size = 11) + theme(legend.position = "bottom")
+save_fig(p, "08_contested_includes", w = 7, h = 3.6)
+```
+
+# Figure inventory
+
+```{r inventory}
+figs <- tibble::tibble(file = list.files(here::here(DIR_FIGURES), pattern = "\\.(png|svg)$")) |>
+  dplyr::mutate(stem = sub("\\.(png|svg)$", "", file),
+                ext = sub("^.*\\.", "", file)) |>
+  dplyr::count(stem, name = "formats") |>
+  dplyr::arrange(stem)
+knitr::kable(figs, caption = "Every figure is written as both PNG and SVG at 300 dpi")
+stopifnot(all(figs$formats == 2))
+```
+
+# Captions, written to be lifted
+
+- **Evidence-map record flow.** Disposition of all
+  `r format(flow$n[flow$step == 1], big.mark = ",")` records retrieved, from
+  search to the `r flow$n[flow$step == 7]`-record analytic set. Two strata were
+  deferred rather than excluded: `r format(flow$removed[flow$step == 3], big.mark = ",")`
+  records had no abstract and `r flow$removed[flow$step == 4]` failed inference
+  on every attempt. No human reviewer screened records at any stage.
+- **Ensemble screening performance.** Sensitivity, specificity, precision and
+  F1 for the two-model ensemble under three logically equivalent prompt
+  phrasings, measured on the external SYNERGY benchmark
+  Bannach-Brown_2019 before any application to our corpus. The deployed
+  configuration (abstract present, affirmative phrasing) achieved sensitivity
+  `r sprintf("%.3f", deployed$sensitivity)` (95% CI
+  `r sprintf("%.2f", ci[1])`–`r sprintf("%.2f", ci[2])`, `r deployed$tp + deployed$fn`
+  positives) and specificity `r sprintf("%.3f", deployed$specificity)`.
+- **How much of the include set rests on one model.** Of
+  `r .a("both include") + .a("only gemma includes") + .a("only llama includes")`
+  records the union rule included, `r .a("both include")` were included by both
+  models and the remainder by exactly one. Cohen's κ between the models was
+  `r sprintf("%.3f", .a("Cohen's kappa"))`.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

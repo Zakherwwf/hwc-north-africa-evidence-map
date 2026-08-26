@@ -1,0 +1,38 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘digest’ was built under R version 4.4.3 
+Warning message:
+package ‘httr’ was built under R version 4.4.3 
+Warning message:
+package ‘readr’ was built under R version 4.4.3 
+
+=== Dataset: Bannach-Brown_2019 ===
+  Bannach-Brown_2019: dropped 57/1993 rows with missing IDs or non-binary labels
+  loaded 1936 ids; prevalence=0.1379
+  sample: 200 (pos=28, neg=172)
+  fetched metadata for 198 records from OpenAlex
+  classifiable: 198 records
+  polarity: affirmative
+    [25/198] elapsed 495s
+    [50/198] elapsed 959s
+    [75/198] elapsed 1440s
+    [100/198] elapsed 1888s
+    [125/198] elapsed 2334s
+    [150/198] elapsed 2824s
+    [175/198] elapsed 3311s
+  done in 3732s
+
+=== ENSEMBLE metrics (per dataset x polarity) ===
+# A tibble: 1 × 15
+  dataset          polarity     n    tp    fp    fn    tn prevalence sensitivity
+  <chr>            <chr>    <int> <int> <int> <int> <int>      <dbl>       <dbl>
+1 Bannach-Brown_2… affirma…   198    25    23     3   147      0.141       0.893
+# ℹ 6 more variables: specificity <dbl>, precision <dbl>, f1 <dbl>,
+#   kappa <dbl>, mcc <dbl>, gwet_ac1 <dbl>
+
+OpenAlex credits used this session: 4 / 8000 cap

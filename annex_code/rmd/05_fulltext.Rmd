@@ -1,0 +1,245 @@
+---
+title: "Module 05 — Full-text retrieval, and what failing to retrieve tells us"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr); library(ggplot2)
+})
+source(here::here("R", "config.R"))
+```
+
+# What this module does, and why the failures are the result
+
+Module 04b returned `r NROW(readRDS(here::here(DIR_DERIVED, "geography_verification.rds")))`
+included records. This module tries to obtain the full text of each one:
+resolve an open-access PDF, download it, push it through GROBID to get TEI
+XML, and check whether the TEI carries recognisable methods and results
+sections. Records whose PDF is a scan rather than digital text would go to
+OCR.
+
+The obvious way to report this module is a single success rate. That would
+waste it. **Which papers we can and cannot read is not a technical footnote;
+it is a measurement of access inequality that bears directly on what this
+evidence map can see.** If full text is systematically harder to obtain for
+one country's literature, then any finding that rests on full-text fields is
+biased against that country, and the bias has a direction we can state. So
+everything below is broken down by country, by language and by source.
+
+```{r read-ledger}
+ret   <- readRDS(here::here(DIR_DERIVED, "retrieval_ledger.rds"))
+tiers <- readRDS(here::here(DIR_DERIVED, "geography_tiers.rds"))
+n_att <- NROW(ret)
+n_dl  <- sum(ret$downloaded %in% TRUE)
+n_tei <- sum(ret$tei_ok %in% TRUE)
+n_met <- sum(ret$has_methods %in% TRUE)
+```
+
+# The retrieval cascade
+
+Every stage prints what it lost.
+
+```{r cascade}
+cascade <- tibble::tibble(
+  stage = c("records entering Module 05",
+            "candidate PDF URL resolved",
+            "PDF downloaded",
+            "GROBID produced parseable TEI",
+            "TEI carries methods/results heads"),
+  n = c(n_att,
+        sum(!is.na(ret$url)),
+        n_dl,
+        n_tei,
+        n_met)) |>
+  dplyr::mutate(lost = dplyr::lag(n) - n,
+                pct_of_entering = round(100 * n / n_att, 1))
+knitr::kable(cascade, caption = "Full-text retrieval cascade, with losses at each stage")
+```
+
+Of `r n_att` records, `r n_dl` yielded a downloadable PDF
+(`r sprintf("%.1f%%", 100 * n_dl / n_att)`) and `r n_tei` produced parseable
+TEI (`r sprintf("%.1f%%", 100 * n_tei / n_att)`). The gap between those two
+numbers is small, so GROBID is not the bottleneck: **acquisition is.**
+
+```{r scanned}
+n_scan <- sum(ret$is_scanned %in% TRUE)
+n_ocr  <- sum(ret$ocr_applied %in% TRUE)
+```
+
+`r n_scan` of the downloaded PDFs were scans (near-zero extractable
+characters per page), so OCR fired on `r n_ocr`. The OCR path
+(`ocrmac` first, `tesseract` with `fra`/`ara` as fallback) is implemented and
+was smoke-tested, but this corpus never exercised it. That is itself worth
+stating: the open-access material we could reach is uniformly born-digital,
+which is a property of *what is reachable*, not of the regional literature.
+Scanned regional reports and theses are exactly the material sitting behind
+the failures tabulated below.
+
+# Why retrieval failed
+
+```{r failures}
+fails <- ret |>
+  dplyr::filter(!(tei_ok %in% TRUE)) |>
+  dplyr::count(failure_reason, sort = TRUE) |>
+  dplyr::mutate(pct_of_failures = round(100 * n / sum(n), 1))
+knitr::kable(fails, caption = "Reason for failure, over records that did not reach TEI")
+```
+
+```{r failure-classes}
+paywall <- fails |>
+  dplyr::filter(failure_reason %in% c("http_403", "publisher_blocked",
+                                      "http_401", "landing_page_not_pdf")) |>
+  dplyr::pull(n) |> sum()
+no_url  <- fails |> dplyr::filter(failure_reason == "no_pdf_url") |> dplyr::pull(n) |> sum()
+transient <- fails |>
+  dplyr::filter(failure_reason %in% c("network_error", "http_429", "http_202",
+                                      "empty_response")) |>
+  dplyr::pull(n) |> sum()
+```
+
+These group into three kinds, and they mean different things:
+
+- **`r paywall` records were refused by a publisher** (403, 401, an
+  interstitial landing page, or a known blocking host). The paper exists and
+  is indexed; we are not permitted to read it.
+- **`r no_url` records had no open-access PDF location at all** in OpenAlex or
+  CORE. Not refused — simply not deposited anywhere reachable.
+- **`r transient` failures were transient** (network, rate limiting, 202
+  "still processing"). These are the only ones a re-run could plausibly
+  recover, and they are a small minority.
+
+The first two categories are structural. **`r paywall + no_url` of
+`r n_att` records — `r sprintf("%.1f%%", 100 * (paywall + no_url) / n_att)` —
+are unreadable for reasons of access, not of technique.**
+
+# Access inequality by country
+
+```{r by-country}
+by_country <- ret |>
+  dplyr::group_by(country) |>
+  dplyr::summarise(
+    n          = dplyr::n(),
+    downloaded = sum(downloaded %in% TRUE),
+    tei        = sum(tei_ok %in% TRUE),
+    tei_pct    = round(100 * sum(tei_ok %in% TRUE) / dplyr::n(), 1),
+    .groups = "drop") |>
+  dplyr::arrange(dplyr::desc(n))
+knitr::kable(by_country,
+             caption = "Full-text retrieval by search cell country (cell of origin, not verified study location)")
+```
+
+```{r country-spread}
+best     <- by_country |> dplyr::slice_max(tei_pct, n = 1)
+worst    <- by_country |> dplyr::slice_min(tei_pct, n = 1)
+thinnest <- by_country |> dplyr::slice_min(n, n = 1)
+compounds <- identical(worst$country, thinnest$country)
+```
+
+The spread runs from `r sprintf("%.1f%%", worst$tei_pct)` (`r worst$country`,
+n = `r worst$n`) to `r sprintf("%.1f%%", best$tei_pct)` (`r best$country`,
+n = `r best$n`).
+
+`r if (compounds) sprintf("**The thinnest cell is also the hardest to read.** %s returns the fewest records (n = %d) *and* the lowest full-text rate (%.1f%%), so the two shortfalls compound. Any %s count in Module 07 is doubly attenuated, and a low count there must not be presented as a measured absence of research.", worst$country, worst$n, worst$tei_pct, worst$country) else sprintf("The thinnest cell (%s, n = %d) is not the worst-retrieved (%s, %.1f%%), so the two shortfalls are independent and must be reported separately.", thinnest$country, thinnest$n, worst$country, worst$tei_pct)`
+
+A caution on this table. `country` here is the **search cell** a record was
+retrieved from, not where the study was actually conducted — Module 06
+stage 0 showed those diverge badly. The table is the right one for judging
+*retrieval* (the cell is what drove which publishers we hit), but it must not
+be read as studies-per-country.
+
+```{r fig-retrieval, fig.width=7, fig.height=4}
+p <- ggplot(by_country, aes(x = reorder(country, tei_pct), y = tei_pct)) +
+  geom_col(fill = "#4477AA") +
+  geom_text(aes(label = sprintf("%d/%d", tei, n)), hjust = -0.15, size = 3.2) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.12))) +
+  labs(x = NULL, y = "records reaching full text (%)",
+       title = "Full-text retrieval by search cell",
+       subtitle = "Retrieval failure is a finding about access, not a processing error") +
+  theme_minimal(base_size = 11)
+print(p)
+dir.create(here::here(DIR_FIGURES), showWarnings = FALSE, recursive = TRUE)
+ggsave(here::here(DIR_FIGURES, "05_retrieval_by_country.png"), p,
+       width = 7, height = 4, dpi = 300)
+ggsave(here::here(DIR_FIGURES, "05_retrieval_by_country.svg"), p,
+       width = 7, height = 4)
+```
+
+# Access inequality by openness and source
+
+```{r by-oa}
+by_oa <- ret |>
+  dplyr::group_by(is_oa = dplyr::coalesce(is_oa, NA)) |>
+  dplyr::summarise(n = dplyr::n(), tei = sum(tei_ok %in% TRUE),
+                   tei_pct = round(100 * sum(tei_ok %in% TRUE) / dplyr::n(), 1),
+                   .groups = "drop")
+knitr::kable(by_oa, caption = "Retrieval by OpenAlex open-access flag")
+
+by_source <- ret |>
+  dplyr::group_by(source) |>
+  dplyr::summarise(n = dplyr::n(), tei = sum(tei_ok %in% TRUE),
+                   tei_pct = round(100 * sum(tei_ok %in% TRUE) / dplyr::n(), 1),
+                   .groups = "drop") |>
+  dplyr::arrange(dplyr::desc(n))
+knitr::kable(by_source, caption = "Retrieval by discovery source")
+```
+
+# What this leaves the evidence map to work with
+
+```{r analytic-coverage}
+an <- tiers |>
+  dplyr::filter(analytic) |>
+  dplyr::left_join(ret |> dplyr::select(id, tei_ok, has_methods), by = "id")
+n_an     <- NROW(an)
+n_an_tei <- sum(an$tei_ok %in% TRUE)
+```
+
+Module 06 stage 0 reduced the `r n_att` included records to an analytic set of
+`r n_an` records actually situated in the five countries. Of those,
+`r n_an_tei` (`r sprintf("%.1f%%", 100 * n_an_tei / n_an)`) have full text.
+
+```{r analytic-by-tier}
+knitr::kable(
+  an |> dplyr::group_by(tier) |>
+    dplyr::summarise(n = dplyr::n(), with_full_text = sum(tei_ok %in% TRUE),
+                     pct = round(100 * sum(tei_ok %in% TRUE) / dplyr::n(), 1),
+                     .groups = "drop"),
+  caption = "Full-text coverage within the analytic set, by geographic confidence tier")
+```
+
+This is the number that shapes Module 06. Extracting only from full text
+would silently redefine the map as a map of the open-access subset — and this
+module has just shown that subset is not drawn evenly. So Module 06 extracts
+every analytic record, from TEI methods/results where available and from
+title and abstract otherwise, carries an `evidence_base` flag on every value,
+and stratifies every reliability figure by it. Fields that only full text can
+support are reported over the full-text stratum alone, with that denominator
+printed.
+
+# Method parameters for the supplement
+
+```{r params, echo=FALSE}
+tibble::tibble(
+  parameter = c("PDF sources, in priority order", "TEI extraction",
+                "Scanned-page test", "OCR engines (unused this run)",
+                "Download timeout", "GROBID timeout"),
+  value = c("pdf_url captured at search time; OpenAlex best_oa_location; CORE by DOI",
+            "GROBID processFulltextDocument",
+            "median extractable characters per page near zero",
+            paste(OCR_ENGINES, collapse = ", "),
+            "120 s", "300 s")
+) |> knitr::kable()
+```
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

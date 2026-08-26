@@ -1,0 +1,92 @@
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+4: package ‘httr’ was built under R version 4.4.3 
+5: package ‘digest’ was built under R version 4.4.3 
+6: package ‘tidyr’ was built under R version 4.4.3 
+Warning message:
+package ‘xml2’ was built under R version 4.4.3 
+Attributing countries for 262 analytic records
+  [25/262] 0.0 min, ETA 0.0 min, 0 errors
+  [50/262] 3.6 min, ETA 15.1 min, 0 errors
+  [75/262] 10.8 min, ETA 27.0 min, 0 errors
+  [100/262] 18.4 min, ETA 29.8 min, 0 errors
+  [125/262] 25.0 min, ETA 27.4 min, 0 errors
+  [150/262] 30.3 min, ETA 22.6 min, 0 errors
+  [175/262] 40.4 min, ETA 20.1 min, 0 errors
+  [200/262] 49.2 min, ETA 15.3 min, 0 errors
+  [225/262] 55.7 min, ETA 9.2 min, 0 errors
+  [250/262] 62.9 min, ETA 3.0 min, 0 errors
+  [262/262] 66.9 min, ETA 0.0 min, 0 errors
+
+=== COUNTRY ATTRIBUTION (multi-label, counts not mutually exclusive) ===
+  country studies sole_focus text_names_country corroborated_pct
+1 Tunisia      81         42                 44             54.3
+2 Morocco      76         44                 52             68.4
+3   Egypt      75         52                 57             76.0
+4 Algeria      47         14                 22             46.8
+5   Libya      31          6                 12             38.7
+
+Analytic records: 262
+Attributed to >=1 of the five: 203 (77.5%)
+Attributed to NO country: 59 -- in scope by the gate but with no
+  country resolvable from title+abstract
+Sum of country cells: 310 (exceeds record count because studies span countries)
+
+=== number of countries per study ===
+
+  0   1   2   3   4   5 
+ 59 158  16  10   5  14 
+
+=== how the single-label gate maps onto the multi-label result ===
+# A tibble: 7 × 3
+  study_country_single   any_country     n
+  <chr>                  <lgl>       <int>
+1 Algeria                TRUE           10
+2 Egypt                  TRUE           28
+3 Libya                  TRUE            2
+4 Morocco                TRUE           23
+5 Tunisia                TRUE           16
+6 multiple North African FALSE          59
+7 multiple North African TRUE          124
+
+=== attribution by geographic confidence tier ===
+# A tibble: 3 × 5
+  tier                             n any_country mean_countries quote_grounded
+  <chr>                        <int>       <int>          <dbl>          <int>
+1 A_named_country_corroborated    79          79           1.01             74
+2 B_regional_corroborated        106          96           1.33             87
+3 C_asserted_no_evidence          77          28           1.16             34
+
+Wrote /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/country_attribution.rds
+      /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/country_attribution.csv
+R version 4.4.1 (2024-06-14)
+Platform: aarch64-apple-darwin20
+Running under: macOS 26.6.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
+
+locale:
+[1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8
+
+time zone: Africa/Tunis
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices datasets  utils     methods   base     
+
+other attached packages:
+[1] xml2_1.5.2     tidyr_1.3.2    digest_0.6.39  httr_1.4.8     jsonlite_2.0.0
+[6] readr_2.2.0    tibble_3.3.1   dplyr_1.2.0    here_1.0.2    
+
+loaded via a namespace (and not attached):
+ [1] crayon_1.5.3     vctrs_0.7.2      cli_3.6.5        rlang_1.1.7     
+ [5] purrr_1.2.1      renv_1.1.8       generics_0.1.4   bit_4.6.0       
+ [9] glue_1.8.0       rprojroot_2.1.1  hms_1.1.4        tzdb_0.5.0      
+[13] yaml_2.3.12      lifecycle_1.0.5  compiler_4.4.1   pkgconfig_2.0.3 
+[17] R6_2.6.1         utf8_1.2.6       tidyselect_1.2.1 parallel_4.4.1  
+[21] vroom_1.7.0      pillar_1.11.1    curl_7.0.0       magrittr_2.0.4  
+[25] bit64_4.6.0-1    tools_4.4.1      withr_3.0.2     

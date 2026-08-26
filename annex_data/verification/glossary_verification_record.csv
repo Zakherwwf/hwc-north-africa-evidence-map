@@ -1,0 +1,4 @@
+document,issue,source_file,finding,action
+glossary,Egypt rank by total-area denominator,denominators_extended.csv,stated 4th; actual 3rd,corrected to 3rd
+glossary,DOI verification described as 40-record random sample,doi_verification_census.csv,"census is complete: 230 records, 218 resolved, 213 title-matched",rewritten as full census; DataCite explanation retained as interpretation of the 12 non-resolutions
+manuscript,DOI census scope stated without its result,doi_verification_census.csv,"scope correct, outcome absent",result added inline

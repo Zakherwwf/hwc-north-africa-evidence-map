@@ -1,0 +1,39 @@
+{
+  "when_utc": "20260811T210637Z",
+  "user_agent": "hwc-na-evidence-map/0.1 (mailto:bouragaoui@wisc.edu)",
+  "checks": {
+    "grobid_isalive": {
+      "ok": true,
+      "body": "true"
+    },
+    "grobid_version": {
+      "ok": true,
+      "body": "0.8.1"
+    },
+    "ollama": {
+      "ok": true,
+      "models_installed": [
+        "gemma4:e4b",
+        "nomic-embed-text:latest",
+        "llama3:latest",
+        "llama3.2:3b",
+        "llama2:latest"
+      ]
+    },
+    "ensemble_present::gemma4:e4b": {
+      "ok": true
+    },
+    "ensemble_present::llama3:latest": {
+      "ok": true
+    },
+    "core_api": {
+      "ok": true,
+      "total_hits": 3,
+      "first_title": "Mitochondrial and nuclear DNA analyses reveal pronounced genetic structuring in Tunisian wild boar Sus scrofa"
+    },
+    "openalex": {
+      "ok": true,
+      "total_hits": 154
+    }
+  }
+}

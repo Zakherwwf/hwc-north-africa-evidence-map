@@ -1,0 +1,44 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+4: package ‘purrr’ was built under R version 4.4.3 
+5: package ‘tidyr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘httr’ was built under R version 4.4.3 
+2: package ‘pdftools’ was built under R version 4.4.3 
+3: package ‘xml2’ was built under R version 4.4.3 
+Warning message:
+package ‘digest’ was built under R version 4.4.3 
+Analytic set: 262 records (121 with TEI)
+
+=== evidence base for the analytic set ===
+# A tibble: 6 × 3
+  evidence_base  text_source                      n
+  <chr>          <chr>                        <int>
+1 full_text      full_body_fallback               4
+2 full_text      full_body_fallback_truncated    13
+3 full_text      methods_results                 95
+4 full_text      methods_results_truncated        4
+5 none           too_short                        2
+6 title_abstract title_abstract                 144
+
+DROPPED 2 records with no usable text:
+                                id
+1 https://openalex.org/W4200213882
+2 https://openalex.org/W2341829960
+                                                          title
+1 6. Silenced by Power: Repression, Isolation &amp; Persecution
+2                            Vultures are Again in the City Sky
+Cross-model subset: 52 of 260 records
+Planned calls: 1716 (gemma4:e4b=1560, qwen2.5:7b=156)
+  [25/1716] 5.4 min, ETA 367.1 min, 0 errors
+  [50/1716] 10.0 min, ETA 333.5 min, 0 errors
+  [75/1716] 16.8 min, ETA 368.4 min, 0 errors
+  [100/1716] 20.8 min, ETA 335.8 min, 0 errors
+  [125/1716] 25.7 min, ETA 327.7 min, 0 errors
+  [150/1716] 29.7 min, ETA 310.1 min, 0 errors

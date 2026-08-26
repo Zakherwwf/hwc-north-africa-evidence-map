@@ -1,0 +1,201 @@
+---
+title: "Module 00 — Environment setup and readiness checks"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+library(here)
+source(here::here("R", "config.R"))
+```
+
+# Purpose
+
+Module 00 does exactly two things: scaffold the project and prove that each
+external dependency the pipeline needs can actually be reached from this
+machine. Anything that fails here must be resolved before Module 01. **No
+downstream module is permitted to substitute mock output for a failed
+dependency.**
+
+# Directory scaffold
+
+```{r scaffold-check}
+expected <- c(
+  DIR_RAW, DIR_DERIVED, DIR_EXTERNAL, DIR_BENCHMARKS,
+  DIR_FIGURES, DIR_TABLES, DIR_OUTPUT, DIR_LOGS,
+  "R", "rmd"
+)
+present <- vapply(expected, function(p) dir.exists(here::here(p)), logical(1))
+stopifnot(all(present))
+data.frame(path = expected, exists = present)
+```
+
+# R toolchain
+
+```{r r-toolchain}
+r_ver  <- R.version.string
+r_plat <- R.version$platform
+have_renv <- requireNamespace("renv", quietly = TRUE)
+
+data.frame(
+  item  = c("R version", "Platform", "renv installed"),
+  value = c(r_ver, r_plat, as.character(have_renv))
+)
+```
+
+# Required R packages
+
+The pipeline expects these packages. Missing ones are listed but **not
+auto-installed** — installation is an explicit step so the user can review it.
+
+```{r r-packages}
+required <- c(
+  "openalexR", "rcrossref", "httr2", "jsonlite", "xml2",
+  "dplyr", "tidyr", "readr", "stringr", "stringi", "purrr",
+  "here", "fs", "digest", "glue",
+  "ggplot2", "scales", "viridisLite", "patchwork",
+  "knitr", "rmarkdown", "sessioninfo"
+)
+have <- vapply(required, function(p) requireNamespace(p, quietly = TRUE), logical(1))
+missing_pkgs <- required[!have]
+data.frame(package = required, installed = have)
+if (length(missing_pkgs) > 0) {
+  message("Missing packages: ", paste(missing_pkgs, collapse = ", "))
+}
+```
+
+# OpenAlex reachability (live — no key required)
+
+The protocol names two anchor findings we should be able to retrieve from a
+North Africa search: wild boar work from the Ghandri group in Tunisia, and
+Gulf of Gabès turtle bycatch. If these do not surface, either the search
+grammar is wrong or the endpoint is unreachable.
+
+```{r openalex-anchor, eval=requireNamespace("openalexR", quietly=TRUE)}
+library(openalexR)
+
+boar_hits <- oa_fetch(
+  entity      = "works",
+  search      = "wild boar Tunisia Sus scrofa damage",
+  per_page    = 25,
+  verbose     = FALSE
+)
+
+turtle_hits <- oa_fetch(
+  entity      = "works",
+  search      = "Gulf of Gabes turtle bycatch Caretta",
+  per_page    = 25,
+  verbose     = FALSE
+)
+
+data.frame(
+  probe    = c("Tunisia wild boar", "Gulf of Gabès turtle bycatch"),
+  n_hits   = c(NROW(boar_hits), NROW(turtle_hits)),
+  earliest = c(min(boar_hits$publication_year,  na.rm = TRUE),
+               min(turtle_hits$publication_year, na.rm = TRUE)),
+  latest   = c(max(boar_hits$publication_year,  na.rm = TRUE),
+               max(turtle_hits$publication_year, na.rm = TRUE))
+)
+```
+
+# CORE API key
+
+```{r core-key}
+key_set <- !is.na(CORE_API_KEY) && nzchar(CORE_API_KEY)
+data.frame(check = "CORE_API_KEY present", value = key_set)
+```
+
+If `FALSE`, register for a free key at <https://core.ac.uk/services/api> and add
+to `~/.Renviron` as `CORE_API_KEY=...`, then restart R.
+
+# GROBID reachability
+
+```{r grobid-check}
+grobid_ok <- tryCatch({
+  r <- httr::GET(paste0(GROBID_URL, "/api/isalive"), httr::timeout(3))
+  httr::status_code(r) == 200
+}, error = function(e) FALSE)
+data.frame(check = "GROBID /api/isalive", value = grobid_ok)
+```
+
+If `FALSE`: install Docker Desktop, start it, then run
+`docker run --rm -p 8070:8070 lfoppiano/grobid:0.8.1` (ARM64 image supported).
+
+# Ollama model server reachability + ensemble present
+
+```{r ollama-check}
+ollama_ok <- tryCatch({
+  r <- httr::GET(paste0(OLLAMA_URL, "/api/tags"), httr::timeout(3))
+  httr::status_code(r) == 200
+}, error = function(e) FALSE)
+
+installed_models <- character(0)
+if (ollama_ok) {
+  tags <- jsonlite::fromJSON(paste0(OLLAMA_URL, "/api/tags"))
+  installed_models <- tags$models$name
+}
+ensemble_present <- ENSEMBLE_MODELS %in% installed_models
+
+data.frame(
+  check = c("Ollama /api/tags reachable",
+            paste("model present:", ENSEMBLE_MODELS)),
+  value = c(ollama_ok, ensemble_present)
+)
+```
+
+If any model is missing: `ollama pull <name>`. At 16 GB unified memory, serve
+the ensemble models **sequentially**, not concurrently — Ollama unloads on
+its own between calls but you can force it with `ollama stop <model>`.
+
+# Ensemble JSON schema probe
+
+Each model must return schema-valid JSON at temperature 0 before it is
+allowed to classify anything. Failing this check disqualifies the model.
+
+```{r ollama-json-probe, eval=ollama_ok}
+probe_one <- function(model) {
+  body <- list(
+    model  = model,
+    prompt = "Return a JSON object with fields include (true|false), confidence (low|medium|high), reason (string). Item: \"Population dynamics of wild boar (Sus scrofa) in northern Tunisia and their impact on cereal crops\".",
+    format = "json",
+    stream = FALSE,
+    options = list(temperature = OLLAMA_TEMPERATURE, seed = OLLAMA_SEED)
+  )
+  r <- httr::POST(paste0(OLLAMA_URL, "/api/generate"),
+                  body = jsonlite::toJSON(body, auto_unbox = TRUE),
+                  encode = "raw",
+                  httr::content_type_json(),
+                  httr::timeout(120))
+  raw <- httr::content(r, "parsed", "application/json")$response
+  parsed <- tryCatch(jsonlite::fromJSON(raw), error = function(e) NULL)
+  list(model = model,
+       ok    = !is.null(parsed) && all(c("include","confidence","reason") %in% names(parsed)),
+       raw   = substr(raw, 1, 240))
+}
+probes <- lapply(ENSEMBLE_MODELS, probe_one)
+data.frame(
+  model         = vapply(probes, `[[`, "", "model"),
+  schema_valid  = vapply(probes, `[[`, logical(1), "ok"),
+  first_240ch   = vapply(probes, `[[`, "", "raw")
+)
+```
+
+# Note on Unpaywall (removed from stack)
+
+The protocol originally included Unpaywall for OA-status lookup. Removed
+because OpenAlex already ingests Unpaywall's OA metadata on every work
+record (`best_oa_location.pdf_url`), so a direct Unpaywall dependency was
+redundant and would have added a ToS-mandated contact-email query parameter
+for no additional coverage. CORE remains the primary fulltext source and
+provides its own OA download URLs.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

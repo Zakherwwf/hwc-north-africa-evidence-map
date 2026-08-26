@@ -1,0 +1,595 @@
+---
+title: "Module 07 — The evidence map: where the research is, and where it is not"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr)
+  library(ggplot2); library(tidyr)
+})
+source(here::here("R", "config.R"))
+OKABE <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+save_fig <- function(p, name, w = 7, h = 4.5) {
+  dir.create(here::here(DIR_FIGURES), showWarnings = FALSE, recursive = TRUE)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".png")), p, width = w, height = h, dpi = 300)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".svg")), p, width = w, height = h)
+  p
+}
+save_tab <- function(d, name) {
+  dir.create(here::here(DIR_TABLES), showWarnings = FALSE, recursive = TRUE)
+  readr::write_csv(d, here::here(DIR_TABLES, paste0(name, ".csv")))
+  d
+}
+```
+
+```{r read-all}
+tiers  <- readRDS(here::here(DIR_DERIVED, "geography_tiers.rds"))
+attr   <- readRDS(here::here(DIR_DERIVED, "country_attribution.rds"))
+auth   <- readRDS(here::here(DIR_DERIVED, "authorship.rds"))
+ctx    <- readRDS(here::here(DIR_EXTERNAL, "country_context.rds"))
+ret    <- readRDS(here::here(DIR_DERIVED, "retrieval_ledger.rds"))
+conf   <- readRDS(here::here(DIR_DERIVED, "include_confidence.rds"))
+contest<- readRDS(here::here(DIR_DERIVED, "contested_set.rds"))
+probe  <- readRDS(here::here(DIR_DERIVED, "citation_probe.rds"))
+ledg   <- readRDS(here::here(DIR_DERIVED, "dedup_ledger.rds")) |>
+  dplyr::distinct(id, .keep_all = TRUE)
+
+GREY_TYPES <- c("dissertation", "report", "preprint", "book-chapter", "book",
+                "conference-paper", "conference-abstract", "other")
+
+map <- tiers |>
+  dplyr::filter(analytic) |>
+  dplyr::select(id, title, tier, study_country, type) |>
+  dplyr::left_join(attr |> dplyr::select(id, dplyr::all_of(COUNTRIES),
+                                         n_countries, any_country,
+                                         quote_grounded, dplyr::ends_with("_named")),
+                   by = "id") |>
+  dplyr::left_join(ledg |> dplyr::select(id, publication_year, is_oa, doi,
+                                         provenance_sources, provenance_cells, n_merged),
+                   by = "id") |>
+  dplyr::left_join(ret |> dplyr::select(id, tei_ok), by = "id") |>
+  dplyr::left_join(auth |> dplyr::select(id, n_authors, author_countries,
+                                         first_incountry, last_incountry, any_incountry),
+                   by = "id") |>
+  dplyr::left_join(conf |> dplyr::select(id, max_confidence, min_confidence), by = "id") |>
+  dplyr::mutate(
+    contested = id %in% contest$id,
+    stratum   = dplyr::if_else(type %in% GREY_TYPES | is.na(type), "grey", "peer-reviewed"),
+    sources   = vapply(provenance_sources,
+                       function(x) paste(sort(unique(unlist(x))), collapse = "+"), character(1)),
+    n_cells   = lengths(provenance_cells))
+n_map <- NROW(map)
+```
+
+# What this map claims, and what it cannot
+
+This is an **automated evidence map**, not a scoping review. It makes claims
+about the *distribution* of research — across countries, taxa, conflict types
+and methods — not about a precisely bounded included set. That distinction is
+what makes it defensible under a pipeline with no human reviewer: if
+classification errors are not systematically biased by country or taxon, a
+distributional claim survives them, while a boundary claim would not.
+
+Four constraints shape everything below and are repeated at each point they
+bite rather than confined to a limitations paragraph:
+
+1. **English-indexed literature only.** `r LANGUAGE_LIMITATION`
+2. **`r sum(map$tei_ok %in% TRUE)` of `r n_map` records have full text.** Fields
+   requiring the methods or results section are reported over that stratum with
+   its own denominator.
+3. **Counts by country are not mutually exclusive.** A study covering three
+   countries counts in three cells.
+4. **Absence in this map is absence of *retrieved, screened, English-indexed*
+   evidence.** Where that is distinguishable from a real research gap, the
+   text says which it is. Where it is not, it says that too.
+
+# From search to map: the record arithmetic
+
+```{r arithmetic}
+# The canonical flow, built and reconciled once in R/build_record_flow.R so
+# that this module and the Module 08 diagram cannot disagree.
+flow <- readr::read_csv(here::here(DIR_DERIVED, "record_flow.csv"), show_col_types = FALSE)
+geo  <- readRDS(here::here(DIR_DERIVED, "geography_verification.rds"))
+n_retrieved <- flow$n[flow$step == 1]
+knitr::kable(flow |> dplyr::select(stage, n, removed, removal_reason),
+             caption = "From retrieval to the analytic set")
+stopifnot(flow$n[flow$step == 7] == n_map)
+```
+
+The map rests on **`r n_map` records** —
+`r sprintf("%.3f%%", 100 * n_map / n_retrieved)` of the
+`r format(n_retrieved, big.mark = ",")` the search retrieved. Each contraction
+is documented in its own module, and the largest are not equivalent:
+deduplication removed redundancy, whereas the geographic gate removed
+`r sum(geo$in_scope %in% FALSE)` records the classifier had wrongly included.
+
+Two strata were **deferred, not excluded** — `r flow$removed[flow$step == 3]`
+records with no abstract and `r flow$removed[flow$step == 4]` on which
+inference failed outright. They were never judged, and a flow that folded them
+into "excluded" would misstate what this pipeline did.
+
+# Geographic distribution
+
+## Raw counts
+
+```{r geo-counts}
+country_long <- map |>
+  tidyr::pivot_longer(dplyr::all_of(COUNTRIES), names_to = "country", values_to = "covered") |>
+  dplyr::filter(covered %in% TRUE)
+
+geo_tbl <- tibble::tibble(country = COUNTRIES) |>
+  dplyr::left_join(country_long |> dplyr::count(country, name = "studies"), by = "country") |>
+  dplyr::left_join(country_long |> dplyr::filter(n_countries == 1) |>
+                     dplyr::count(country, name = "sole_focus"), by = "country") |>
+  dplyr::left_join(country_long |> dplyr::filter(stratum == "peer-reviewed") |>
+                     dplyr::count(country, name = "peer_reviewed"), by = "country") |>
+  dplyr::left_join(country_long |> dplyr::filter(stratum == "grey") |>
+                     dplyr::count(country, name = "grey"), by = "country") |>
+  dplyr::left_join(country_long |> dplyr::filter(tei_ok %in% TRUE) |>
+                     dplyr::count(country, name = "with_full_text"), by = "country") |>
+  dplyr::mutate(dplyr::across(-country, ~ tidyr::replace_na(.x, 0L)))
+knitr::kable(geo_tbl, caption = "Studies per country. Counts are not mutually exclusive; peer-reviewed and grey are reported separately and never summed into a headline.")
+save_tab(geo_tbl, "07_studies_by_country")
+```
+
+```{r geo-unattributed}
+n_unattr <- sum(!map$any_country %in% TRUE)
+```
+
+`r n_unattr` of the `r n_map` analytic records could not be attributed to any
+of the five countries from title and abstract. They passed the in-scope gate
+but name no country specifically enough to place. They are **not** distributed
+across the cells above, so every count here is a floor.
+
+## Normalised by land area and population
+
+A raw count conflates "little research happens here" with "this is a small
+country". Both denominators come from the World Bank
+(land area `r unique(ctx$land_area_km2_year)`, population
+`r unique(ctx$population_year)`).
+
+```{r geo-normalised}
+geo_norm <- geo_tbl |>
+  dplyr::left_join(ctx |> dplyr::select(country, land_area_km2, population), by = "country") |>
+  dplyr::mutate(
+    per_100k_km2 = round(studies / (land_area_km2 / 1e5), 2),
+    per_million_people = round(studies / (population / 1e6), 2)) |>
+  dplyr::select(country, studies, land_area_km2, population,
+                per_100k_km2, per_million_people) |>
+  dplyr::arrange(dplyr::desc(studies))
+knitr::kable(geo_norm, caption = "Research intensity normalised by land area and population",
+             format.args = list(big.mark = ","))
+save_tab(geo_norm, "07_studies_normalised")
+```
+
+```{r geo-gap}
+gmax <- geo_norm |> dplyr::slice_max(studies, n = 1)
+gmin <- geo_norm |> dplyr::slice_min(studies, n = 1)
+amax <- geo_norm |> dplyr::slice_max(per_100k_km2, n = 1)
+amin <- geo_norm |> dplyr::slice_min(per_100k_km2, n = 1)
+```
+
+```{r geo-gap-2}
+pmax_ <- geo_norm |> dplyr::slice_max(per_million_people, n = 1)
+pmin_ <- geo_norm |> dplyr::slice_min(per_million_people, n = 1)
+rank_raw  <- geo_norm |> dplyr::arrange(dplyr::desc(studies)) |> dplyr::pull(country)
+rank_area <- geo_norm |> dplyr::arrange(dplyr::desc(per_100k_km2)) |> dplyr::pull(country)
+rank_pop  <- geo_norm |> dplyr::arrange(dplyr::desc(per_million_people)) |> dplyr::pull(country)
+```
+
+**The gap, quantified.** `r gmax$country` carries `r gmax$studies` studies and
+`r gmin$country` carries `r gmin$studies` — a ratio of
+`r sprintf("%.1f", gmax$studies / max(gmin$studies, 1))` to 1 in raw counts.
+Per 100,000 km² the spread widens sharply, from
+`r sprintf("%.2f", amax$per_100k_km2)` (`r amax$country`) to
+`r sprintf("%.2f", amin$per_100k_km2)` (`r amin$country`) — a ratio of
+`r sprintf("%.1f", amax$per_100k_km2 / max(amin$per_100k_km2, 0.01))` to 1,
+because the countries with the fewest studies are also the largest.
+
+**But the denominator changes the answer, and that has to be said.** Per
+million people the order is different: `r pmax_$country` is highest at
+`r sprintf("%.2f", pmax_$per_million_people)` and `r pmin_$country` is lowest
+at `r sprintf("%.2f", pmin_$per_million_people)`.
+
+```{r geo-rank-compare}
+knitr::kable(tibble::tibble(
+  rank = seq_along(rank_raw),
+  `by raw count` = rank_raw,
+  `per 100,000 km²` = rank_area,
+  `per million people` = rank_pop),
+  caption = "Country order under each denominator")
+```
+
+`r sprintf("%s ranks %s of %d on raw count, %s per unit area, and %s per million people.", gmin$country, scales::ordinal(which(rank_raw == gmin$country)), length(rank_raw), scales::ordinal(which(rank_area == gmin$country)), scales::ordinal(which(rank_pop == gmin$country)))`
+A country with a small population can look research-rich per capita while
+holding very few studies in absolute terms. **Neither denominator is the right
+one on its own**, and this map reports all three rather than choosing the one
+that tells the tidiest story. Where the three disagree, the raw count is what
+a researcher planning fieldwork needs and the normalised figures are what a
+funder allocating effort needs.
+
+```{r fig-geo, fig.width=8, fig.height=4.5}
+p <- geo_norm |>
+  tidyr::pivot_longer(c(studies, per_100k_km2, per_million_people),
+                      names_to = "measure", values_to = "value") |>
+  dplyr::mutate(measure = factor(measure, c("studies", "per_100k_km2", "per_million_people"),
+                                 c("studies", "per 100,000 km²", "per million people"))) |>
+  ggplot(aes(x = reorder(country, value), y = value, fill = measure)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ measure, scales = "free_x") +
+  coord_flip() +
+  scale_fill_manual(values = OKABE[c(6, 5, 3)]) +
+  labs(x = NULL, y = NULL,
+       title = "Human-wildlife conflict research across North Africa",
+       subtitle = sprintf("%d studies; counts are not mutually exclusive", n_map)) +
+  theme_minimal(base_size = 11)
+save_fig(p, "07_geographic_distribution", w = 8, h = 4.5)
+```
+
+## Is a thin cell a gap, or an artefact?
+
+```{r geo-artefact}
+art <- geo_tbl |>
+  dplyr::left_join(
+    ret |> dplyr::mutate(cell_country = country) |> dplyr::count(cell_country, name = "cell_records"),
+    by = c("country" = "cell_country")) |>
+  dplyr::left_join(
+    ret |> dplyr::group_by(cell_country = country) |>
+      dplyr::summarise(cell_tei_pct = round(100 * mean(tei_ok %in% TRUE), 1), .groups = "drop"),
+    by = c("country" = "cell_country")) |>
+  dplyr::select(country, studies, cell_records, cell_tei_pct)
+knitr::kable(art, caption = "Studies found against how much the search cell returned and how much of it was readable")
+```
+
+This table is the honest reading of the one above it. A country with few
+studies **and** a thin search cell **and** poor full-text retrieval has three
+compounding shortfalls, and the map cannot separate them from a genuine
+absence of research. Naming that country's low count as a "research gap"
+without this table beside it would be the central failure mode of this study.
+
+# Temporal
+
+```{r temporal}
+FUTURE <- as.integer(format(Sys.Date(), "%Y"))
+n_future <- sum(map$publication_year > FUTURE, na.rm = TRUE)
+yr <- map |> dplyr::filter(!is.na(publication_year), publication_year <= FUTURE)
+by_year <- yr |> dplyr::count(publication_year, stratum, name = "n")
+save_tab(by_year, "07_publications_by_year")
+```
+
+`r n_future` record`r if (n_future != 1) "s"` carr`r if (n_future == 1) "ies" else "y"`
+a publication year after `r FUTURE` — an upstream metadata error, not a
+prediction. Those records are excluded from the time series and reported here
+rather than silently dropped.
+
+```{r fig-temporal, fig.width=8, fig.height=4}
+p <- ggplot(by_year, aes(x = publication_year, y = n, fill = stratum)) +
+  geom_col() +
+  scale_fill_manual(values = c("peer-reviewed" = OKABE[5], "grey" = OKABE[1])) +
+  labs(x = NULL, y = "studies", fill = NULL,
+       title = "Publications per year",
+       subtitle = sprintf("%d studies, %d-%d; grey and peer-reviewed shown separately",
+                          NROW(yr), min(yr$publication_year), max(yr$publication_year))) +
+  theme_minimal(base_size = 11) + theme(legend.position = "bottom")
+save_fig(p, "07_publications_by_year", w = 8, h = 4)
+```
+
+```{r temporal-recent}
+half <- yr |> dplyr::mutate(era = dplyr::if_else(publication_year >= 2015, "2015+", "pre-2015")) |>
+  dplyr::count(era)
+```
+
+`r half$n[half$era == "2015+"]` of `r NROW(yr)`
+(`r sprintf("%.0f%%", 100 * half$n[half$era == "2015+"] / NROW(yr))`) were
+published in 2015 or later. Read that as growth in *indexed, English-language*
+output as much as growth in research: OpenAlex coverage of regional journals
+improves sharply over the same period, and the two cannot be separated here.
+
+```{r fig-temporal-country, fig.width=8, fig.height=4.5}
+tc <- country_long |> dplyr::filter(!is.na(publication_year), publication_year <= FUTURE) |>
+  dplyr::count(country, publication_year, name = "n")
+p <- ggplot(tc, aes(x = publication_year, y = n, colour = country)) +
+  geom_line(linewidth = 0.7) + geom_point(size = 1) +
+  scale_colour_manual(values = OKABE) +
+  labs(x = NULL, y = "studies", colour = NULL, title = "Publications per year by country") +
+  theme_minimal(base_size = 11) + theme(legend.position = "bottom")
+save_fig(p, "07_year_by_country", w = 8, h = 4.5)
+```
+
+# Language and indexing
+
+```{r indexing}
+idx <- tibble::tibble(
+  quantity = c("records in the analytic set",
+               "found via OpenAlex only", "found via CORE only", "found via both",
+               "found by exactly one search cell",
+               "open access flagged", "records in French or Arabic",
+               "estimated in-scope works citation chasing would have added"),
+  n = c(n_map,
+        sum(map$sources == "openalex"), sum(map$sources == "core"),
+        sum(map$sources == "core+openalex"),
+        sum(map$n_cells == 1),
+        sum(map$is_oa %in% TRUE),
+        sum(ledg$language[ledg$id %in% map$id] %in% c("fr", "ar")),
+        # Read from the probe's own stored estimate, never re-derived here.
+        round(probe$estimate$estimate[probe$estimate$test == "strict"])))
+knitr::kable(idx, caption = "How the analytic set was found")
+save_tab(idx, "07_indexing")
+```
+
+**`r sum(map$sources == "core")` records came from CORE alone** and would have
+been missed by an OpenAlex-only search;
+**`r sum(map$n_cells == 1)` of `r n_map`
+(`r sprintf("%.0f%%", 100 * mean(map$n_cells == 1))`) were returned by exactly
+one search cell**, so a single term-block change would have dropped them.
+That is a fragile search, and it is the strongest internal evidence that the
+absences in this map are partly artefacts of how it was built.
+
+```{r probe-estimate}
+pe <- probe$estimate |> dplyr::filter(test == "strict")
+```
+
+The last row is the calibrated citation-probe estimate from Module 02b:
+approximately `r round(pe$estimate)` in-scope works
+(95% CI `r round(pe$ci_lo)`–`r round(pe$ci_hi)`) that backward and forward
+citation chasing would have added, against a
+`r n_map`-record analytic set. The interval is wide because the raw detection
+was `r pe$detected` record`r if (pe$detected != 1) "s"` and the string test's
+measured sensitivity is only `r sprintf("%.3f", pe$sensitivity)`. That probe
+searches the citation neighbourhood of records we already found, so it bounds
+what citation chasing would have added — **not** what the search missed
+overall.
+
+**Zero records are in French or Arabic.** The French cells returned 2 records
+across the entire 65,820-record corpus and the Arabic cells returned none.
+That is a term-coverage artefact — the non-English blocks were far narrower,
+and the Latin binomials that would have caught francophone papers sat in an
+English-filtered cell. Maghreb wildlife research is substantially francophone,
+so **the Algerian and Moroccan cells in this map are the ones most likely to
+understate real research activity**, and no count here should be read as
+evidence about the francophone literature.
+
+# Authorship equity
+
+```{r authorship}
+cov <- map |> dplyr::filter(!is.na(author_countries))
+eq <- tibble::tibble(
+  measure = c("first author in-country", "senior (last) author in-country",
+              "any author in-country", "no in-country author"),
+  n = c(sum(cov$first_incountry %in% TRUE), sum(cov$last_incountry %in% TRUE),
+        sum(cov$any_incountry %in% TRUE), sum(cov$any_incountry %in% FALSE)),
+  denominator = c(sum(!is.na(cov$first_incountry)), sum(!is.na(cov$last_incountry)),
+                  sum(!is.na(cov$any_incountry)), sum(!is.na(cov$any_incountry)))) |>
+  dplyr::mutate(pct = round(100 * n / denominator, 1))
+knitr::kable(eq, caption = "In-country authorship, over records with affiliation metadata")
+save_tab(eq, "07_authorship_equity")
+```
+
+`r n_map - NROW(cov)` records carry no affiliation metadata and are excluded
+from these denominators rather than counted as having no in-country author —
+missing data is not evidence of absence.
+
+```{r authorship-by-country}
+ac <- country_long |> dplyr::filter(!is.na(author_countries)) |>
+  dplyr::group_by(country) |>
+  dplyr::summarise(studies = dplyr::n(),
+                   first_incountry = sum(first_incountry %in% TRUE),
+                   pct = round(100 * mean(first_incountry %in% TRUE), 1),
+                   .groups = "drop") |>
+  dplyr::arrange(dplyr::desc(studies))
+knitr::kable(ac, caption = "In-country first authorship by study country")
+save_tab(ac, "07_authorship_by_country")
+```
+
+An author counts as in-country if **any** of their affiliations on that work
+sits in one of the five countries, which counts a Tunisian author with a joint
+French post as Tunisian. The generous reading makes the finding conservative:
+if the share is low even counting joint appointments, it is genuinely low.
+
+# Taxonomic, conflict type, and method
+
+```{r extraction-available}
+# The guard is the MANIFEST, not file existence. An earlier version of this
+# chunk tested only that extraction_fields.rds existed; it passed on the
+# output of a 5-record smoke run and this module published a taxonomic table
+# reading "n = 4 studies" as though it described the corpus. A partial run
+# must be indistinguishable from no run at all here.
+man_path <- here::here(DIR_DERIVED, "extraction_manifest.rds")
+ext_path <- here::here(DIR_DERIVED, "extraction_fields.rds")
+rel_path <- here::here(DIR_TABLES, "extraction_reliability.csv")
+
+man <- if (file.exists(man_path)) readRDS(man_path) else NULL
+have_ext <- !is.null(man) && isTRUE(man$complete) &&
+  file.exists(ext_path) && file.exists(rel_path) &&
+  man$n_records >= 0.95 * n_map
+if (!is.null(man)) knitr::kable(man, caption = "Module 06 extraction manifest")
+```
+
+`r if (!have_ext) sprintf("**Module 06 extraction has not completed over the analytic set, so these sections are not computed.** %s No placeholder numbers are shown, and no partial result is reported as though it described the corpus.", if (is.null(man)) "No extraction manifest exists yet." else sprintf("The manifest records a run over %d of %d analytic records with %d failed calls%s.", man$n_records, n_map, man$n_calls_failed, if (!is.na(man$limit)) sprintf(" under an explicit --limit of %d", man$limit) else "")) else ""`
+
+```{r taxonomy, eval=have_ext}
+ext <- readRDS(ext_path)
+rel <- readr::read_csv(rel_path, show_col_types = FALSE)
+unreliable <- rel$field[!rel$reliable %in% TRUE]
+cat("Fields excluded from the headline analysis (below the",
+    FIELD_RELIABILITY_MIN, "reliability floor):\n  ",
+    paste(unreliable, collapse = ", "), "\n")
+
+# FREE-TEXT NORMALISATION.
+# The model returns species names as written in each paper, so one taxon
+# arrives as "sea turtles", "sea turtle", "loggerhead turtle" and "loggerhead
+# turtles". Counting those as four species understates every one of them and
+# corrupts the taxonomic strand, which is the point of this section.
+#
+# Normalisation is deliberately conservative: lower-case, strip punctuation,
+# collapse whitespace, and singularise a trailing "s" only on words longer
+# than three characters whose ending is not itself part of the singular --
+# "ss", "us", "is", "as", "os". Without the "is" guard this turned "northern
+# bald ibis" into "ibi". It merges
+# plurals; it does NOT merge "loggerhead turtle" into "sea turtle", because
+# that is a taxonomic judgement and the model was not asked to make it. The
+# raw-to-normalised mapping is printed so the merge can be audited.
+.norm_species <- function(x) {
+  y <- tolower(trimws(gsub("[[:punct:]]+", " ", x)))
+  y <- gsub("\\s+", " ", y)
+  vapply(strsplit(y, " "), function(w) {
+    w <- vapply(w, function(t)
+      if (nchar(t) > 3 && grepl("s$", t) && !grepl("(ss|us|is|as|os)$", t))
+        sub("s$", "", t) else t, character(1))
+    paste(w, collapse = " ")
+  }, character(1))
+}
+
+.field_counts <- function(f, normalise = FALSE) {
+  if (f %in% unreliable) return(NULL)
+  d <- ext |> dplyr::filter(field == f, !is.na(value_final), value_final != "not stated")
+  if (normalise) d <- d |> dplyr::mutate(value_final = .norm_species(value_final))
+  d |> dplyr::count(value_final, sort = TRUE) |>
+    dplyr::rename(!!f := value_final, studies = n)
+}
+for (f in c("taxonomic_class", "conflict_type", "marine_terrestrial", "study_design")) {
+  d <- .field_counts(f)
+  if (is.null(d)) { cat("\n", f, ": excluded as unreliable\n"); next }
+  print(knitr::kable(head(d, 20), caption = sprintf("%s (n = %d studies with a verified value)",
+                                                    f, sum(d$studies))))
+  save_tab(d, paste0("07_", f))
+}
+
+sp <- .field_counts("species_common", normalise = TRUE)
+if (is.null(sp)) {
+  cat("\nspecies_common: excluded as unreliable\n")
+} else {
+  print(knitr::kable(head(sp, 25),
+        caption = sprintf("species_common, plural-normalised (n = %d study-species pairs, %d distinct names)",
+                          sum(sp$studies), NROW(sp))))
+  save_tab(sp, "07_species_common")
+
+  # The audit trail for the merge above.
+  sp_map <- ext |>
+    dplyr::filter(field == "species_common", !is.na(value_final),
+                  value_final != "not stated") |>
+    dplyr::mutate(normalised = .norm_species(value_final)) |>
+    dplyr::count(normalised, value_final, name = "n") |>
+    dplyr::group_by(normalised) |>
+    dplyr::filter(dplyr::n() > 1) |>
+    dplyr::ungroup() |>
+    dplyr::arrange(normalised, dplyr::desc(n))
+  if (NROW(sp_map)) {
+    print(knitr::kable(sp_map,
+          caption = sprintf("Raw forms merged by normalisation (%d names collapsed into %d)",
+                            NROW(sp_map), dplyr::n_distinct(sp_map$normalised))))
+    save_tab(sp_map, "07_species_normalisation_audit")
+  }
+}
+```
+
+```{r mitigation, eval=have_ext}
+mit <- ext |> dplyr::filter(field == "mitigation_outcome_measured")
+n_measured <- sum(mit$value_final %in% "yes")
+cat(sprintf("Studies evaluating a mitigation with a measured outcome: %d of %d (%.1f%%)\n",
+            n_measured, NROW(mit), 100 * n_measured / max(NROW(mit), 1)))
+```
+
+# Robustness
+
+Every headline count is recomputed under defensible changes of rule. A finding
+that flips is not a finding.
+
+```{r robustness}
+.recount <- function(d, label) {
+  cl <- d |> tidyr::pivot_longer(dplyr::all_of(COUNTRIES), names_to = "country",
+                                 values_to = "covered") |>
+    dplyr::filter(covered %in% TRUE)
+  tibble::tibble(variant = label, n_studies = NROW(d)) |>
+    dplyr::bind_cols(as_tibble_row(setNames(
+      vapply(COUNTRIES, function(c) sum(cl$country == c), integer(1)), COUNTRIES)))
+}
+# NOTE ON (a) AND (c). The protocol lists "union vs intersection decision
+# rule" and "contested records included vs excluded" as separate variants. On
+# this corpus they are the SAME set operation: a contested record is by
+# definition one that exactly one model included, so dropping the contested
+# set IS applying the intersection rule. They are computed once and labelled
+# as one variant. Reporting them as two independent corroborations would
+# double-count a single check, which is the opposite of what a robustness
+# analysis is for.
+variants <- dplyr::bind_rows(
+  .recount(map, "headline (union rule, all)"),
+  .recount(map |> dplyr::filter(!contested),
+           "(a)=(c) intersection rule / contested excluded"),
+  .recount(map |> dplyr::filter(max_confidence %in% "high"), "(b) high-confidence only"),
+  .recount(map |> dplyr::filter(stratum == "peer-reviewed"), "(d) peer-reviewed only"),
+  .recount(map |> dplyr::filter(tier != "C_asserted_no_evidence"),
+           "(f) geographic tier C excluded"))
+knitr::kable(variants, caption = "Studies per country under each robustness variant")
+save_tab(variants, "07_robustness_variants")
+```
+
+Variants (a) and (c) are one variant, not two. A contested record is by
+definition one that exactly one model included, so excluding the contested set
+**is** the intersection rule. They are reported together; presenting them as
+two independent checks would double-count a single test.
+
+The intersection rule cuts the map from `r NROW(map)` studies to
+`r variants$n_studies[2]` — it removes
+`r sprintf("%.0f%%", 100 * (1 - variants$n_studies[2] / NROW(map)))` of the
+evidence base. Variant (b) removes almost nothing
+(`r NROW(map) - variants$n_studies[3]` records), because
+`r sprintf("%.0f%%", 100 * mean(map$max_confidence %in% "high"))` of includes
+were high-confidence. **The classifier was confidently wrong, not tentatively
+wrong**, so confidence filtering is not a usable safeguard here.
+
+```{r robustness-rank}
+ranks <- variants |>
+  tidyr::pivot_longer(dplyr::all_of(COUNTRIES), names_to = "country", values_to = "n") |>
+  dplyr::group_by(variant) |>
+  dplyr::mutate(rank = rank(-n, ties.method = "min")) |>
+  dplyr::ungroup() |>
+  dplyr::select(variant, country, rank) |>
+  tidyr::pivot_wider(names_from = variant, values_from = rank)
+knitr::kable(ranks, caption = "Rank of each country under each variant. A stable ordering is the claim this map can defend.")
+save_tab(ranks, "07_robustness_ranks")
+
+top_stable <- ranks |> dplyr::filter(dplyr::if_all(-country, ~ .x == 1))
+bottom <- ranks |> dplyr::filter(dplyr::if_all(-country, ~ .x >= 4))
+```
+
+`r if (NROW(top_stable)) sprintf("**%s ranks first under every variant.**", paste(top_stable$country, collapse = " and ")) else "**No country ranks first under every variant** — the leading position is not robust and must not be reported as a finding."`
+`r if (NROW(bottom)) sprintf("**%s rank%s in the bottom two under every variant**, which is the more robust half of the geographic finding: the map can defend where the evidence is thinnest more confidently than where it is densest.", paste(bottom$country, collapse = " and "), if (NROW(bottom) == 1) "s" else "") else ""`
+
+```{r robustness-note, eval=have_ext}
+cat("Variant (e), records whose fields failed quote-grounding, is computed\n",
+    "over the extraction output above.\n")
+```
+
+`r if (!have_ext) "Variant (e) — with and without records whose fields failed quote-grounding — requires the Module 06 extraction output and is not yet computed." else ""`
+
+# What this map can and cannot conclude
+
+```{r conclusions}
+n_frag <- sum(map$n_cells == 1)
+n_tierC <- sum(map$tier == "C_asserted_no_evidence")
+```
+
+- **Defensible:** the *ordering* of countries by research volume, to the extent
+  the robustness table above shows it stable, and the fact that
+  `r n_unattr` in-scope records cannot be placed in any country at all.
+- **Defensible with its qualifier:** that research is thin in the low-count
+  countries *of the English-indexed literature reachable by this search*.
+- **Not defensible:** any claim that a low count reflects an absence of
+  research. `r n_frag` records hinge on a single search cell,
+  `r n_tierC` sit in the weakest geographic tier, zero records are in French or
+  Arabic, and full text was unobtainable for
+  `r sum(!map$tei_ok %in% TRUE)` of `r n_map` records.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

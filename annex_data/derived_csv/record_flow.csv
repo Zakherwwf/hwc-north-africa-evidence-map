@@ -1,0 +1,9 @@
+step,stage,n,removed,removal_reason,disposition
+1,"Records retrieved (OpenAlex + CORE, all cells)",95546,NA,NA,retrieved
+2,After deduplication,65820,29726,duplicate records merged,carried
+3,"Abstract present, eligible for screening",61065,4755,"no abstract: DEFERRED, not excluded",carried
+4,Screened by the ensemble,60961,104,"inference failed on every attempt: DEFERRED, not excluded",carried
+5,Included by the ensemble (union rule),550,60411,judged not eligible by both models,carried
+6,Verified as located in the five countries,266,284,located outside the five countries,carried
+7,Analytic set (study types only),262,4,"not a study (paratext, editorial) by record type",carried
+8,Analytic set with retrievable full text,121,141,no open-access full text obtainable,carried

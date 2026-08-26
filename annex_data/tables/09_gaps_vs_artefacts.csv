@@ -1,0 +1,8 @@
+finding,verdict,basis
+Libya and Algeria rank last on volume,"Robust to all five variants, but partly artefactual","Stable under every robustness variant, but the Libya search cell is the smallest AND worst-retrieved, and francophone Algerian work is invisible to an English search"
+Tunisia leads,NOT a finding,No country ranks first under all variants; Tunisia falls to 2nd and 3rd under two of them
+Libya is research-poor per capita,NOT supported,Libya ranks 2nd of 5 per million people; only the area and raw denominators put it last
+Full-text access is unequal by country,Real,"Mechanical retrieval outcome, no model judgement involved"
+Three a priori conflict taxa have zero studies,"Real gap, with the language caveat","African wolf, crested porcupine and fennec fox were written into the search string before retrieval and actively searched for; the search sought them and found nothing. All three are terrestrial, which is where francophone coverage bites hardest"
+Livestock depredation has one study region-wide,"Real gap, near-certainly understated","Jackal, wolf and hyaena predation is a live regional issue; one study across five countries is not a plausible complete picture, and the francophone qualifier applies with full force"
+Zero French or Arabic records,"Artefact, definitively","The non-English term blocks were far narrower and the Latin binomials sat in an English-filtered cell; this is a search-construction fact, not a fact about the literature"

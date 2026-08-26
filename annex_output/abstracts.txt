@@ -1,0 +1,21 @@
+=== 250-WORD ABSTRACT ===
+Across North Africa, people and wildlife share increasingly contested ground: wild boar in Tunisian farmland, jackals and hyaenas near livestock, sea turtles and cetaceans in Mediterranean fishing gear. Coexistence depends on knowing where conflict occurs and what has been tried; that research base has never been mapped.
+
+We built an automated evidence map of human-wildlife conflict and coexistence research in Algeria, Egypt, Libya, Morocco and Tunisia. 95,546 records were retrieved from OpenAlex and CORE, deduplicated to 65,820, and screened by a two-model local ensemble (gemma4:e4b + llama3:latest) under a union rule. Performance was validated on the external SYNERGY benchmark: sensitivity 1.00 (95% CI 0.75-1.00), specificity 0.93. Every record's location was verified, leaving 262 studies in the five countries.
+
+Research is unevenly distributed and the unevenness widens under normalisation. Tunisia holds 81 studies and Libya 31; per unit land area the ratio reaches 30 to one. Three of eleven a priori conflict taxa have no studies (African wolf, crested porcupine, fennec fox); golden jackal has one. Only 52% of records yielded retrievable full text, worst for the country with fewest records. In-country first authorship stands at 42%. Only 27 of 260 studies (10%) evaluated a mitigation with a measured outcome.
+
+Under five robustness variants no country ranks first consistently, but Algeria and Libya rank last consistently. We report where evidence is thinnest, not where it is richest.
+
+Automated synthesis makes regional evidence maps feasible, and makes their limits measurable — which is what makes them usable.
+
+=== 300-WORD ABSTRACT ===
+Across North Africa, people and wildlife share increasingly contested ground: wild boar in Tunisian farmland, jackals and striped hyaenas near livestock, sea turtles and cetaceans drowning in Mediterranean fishing gear. Coexistence depends on knowing where conflict occurs, which species are involved, and what has been tried. That research base has never been mapped.
+
+We built an automated evidence map of human-wildlife conflict and coexistence research in Algeria, Egypt, Libya, Morocco and Tunisia. 95,546 records were retrieved from OpenAlex and CORE, deduplicated to 65,820, and screened by a two-model local ensemble (gemma4:e4b + llama3:latest) under a union rule chosen to maximise recall. No human reviewer screened records. Classifier performance was measured on the external SYNERGY benchmark before any application to our corpus: sensitivity 1.00 (95% CI 0.75-1.00, 13 positives), specificity 0.93. Because low-prevalence screening yields false positives despite high specificity, every record's location was verified, reducing 550 includes to 262 studies in scope.
+
+Research is unevenly distributed, and normalisation widens the gap. Tunisia holds 81 studies against Libya's 31; per unit land area the ratio reaches 30 to one, since the thinnest countries are the largest. Per capita the ordering inverts, so we report all three denominators. Three of eleven a priori conflict taxa have no studies (African wolf, crested porcupine, fennec fox); golden jackal has one. Only 52% yielded retrievable full text, poorest for the country returning fewest records. In-country first authorship stands at 42%. Only 27 of 260 studies (10%) evaluated a mitigation with a measured outcome.
+
+Under five robustness variants no country ranks first consistently; Algeria and Libya rank last consistently. We report where evidence is thinnest, the claim the data supports.
+
+Automated synthesis makes regional evidence maps feasible where none existed, and makes their limits measurable - which is what makes a map usable rather than fast.

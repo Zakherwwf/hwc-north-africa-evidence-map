@@ -1,0 +1,8 @@
+deviation,consequence
+Citation chasing not performed,"Estimated 5 in-scope works missed (95% CI 0-26), measured by a calibrated citation probe in Module 02b"
+French and Arabic search returned 2 and 0 records,Evidence gaps are gaps in English-indexed literature; francophone Maghreb research is systematically under-represented
+Title-only records not screened,"4,755 records never judged; not missing at random (older, grey, regional venues)"
+qwen2.5:7b dropped from the ensemble,"Leave-one-out ablation showed identical confusion matrices; qwen added 5 includes on the real corpus, all out of scope"
+"Extraction run 2 uses temperature 0.3, not 0","Temperature 0 with a fixed seed is deterministic, so a temperature-0 pair would report self-consistency 1.00 by construction and measure nothing"
+Geographic verification pass added after screening,"Screening precision on our own corpus was 48.4%; the pass is a correction, and its removals are reported"
+Protocol robustness variants (a) and (c) are one test,"A contested record is by definition one exactly one model included, so excluding contested records IS the intersection rule"

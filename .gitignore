@@ -1,0 +1,20 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+.build/
+.build_glossary/
+
+# R environment & history
+.Rhistory
+.RData
+.Ruserdata
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local environment files (if any created)
+.env
+.Renviron

@@ -1,0 +1,350 @@
+---
+title: "Module 07b — What these studies actually found, and where the holes are"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr)
+  library(ggplot2); library(tidyr)
+})
+source(here::here("R", "config.R"))
+source(here::here("R", "species_reference.R"))
+OKABE <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+save_fig <- function(p, name, w = 8, h = 5) {
+  dir.create(here::here(DIR_FIGURES), showWarnings = FALSE, recursive = TRUE)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".png")), p, width = w, height = h, dpi = 300)
+  ggsave(here::here(DIR_FIGURES, paste0(name, ".svg")), p, width = w, height = h)
+  p
+}
+save_tab <- function(d, name) {
+  dir.create(here::here(DIR_TABLES), showWarnings = FALSE, recursive = TRUE)
+  readr::write_csv(d, here::here(DIR_TABLES, paste0(name, ".csv"))); d
+}
+```
+
+```{r read}
+man   <- readRDS(here::here(DIR_DERIVED, "extraction_manifest.rds"))
+stopifnot(isTRUE(man$complete))
+ext   <- readRDS(here::here(DIR_DERIVED, "extraction_fields.rds"))
+rel   <- readr::read_csv(here::here(DIR_TABLES, "extraction_reliability.csv"),
+                         show_col_types = FALSE)
+attr_ <- readRDS(here::here(DIR_DERIVED, "country_attribution.rds"))
+tiers <- readRDS(here::here(DIR_DERIVED, "geography_tiers.rds"))
+ledg  <- readRDS(here::here(DIR_DERIVED, "dedup_ledger.rds")) |>
+  dplyr::distinct(id, .keep_all = TRUE)
+unreliable <- rel$field[!rel$reliable %in% TRUE]
+
+# Schema-echo junk. The field spec literally reads `mitigation_type: free
+# text, or "not stated"`, and the model occasionally returned the string
+# "free text" as the value. These are prompt artefacts, not extractions, and
+# are dropped here and counted so the defect is visible rather than silent.
+JUNK <- c("free text", "n/a", "na", "none", "unknown", "not applicable")
+n_junk <- sum(tolower(trimws(ext$value_final)) %in% JUNK, na.rm = TRUE)
+
+val <- function(f) {
+  ext |>
+    dplyr::filter(field == f, !is.na(value_final), value_final != "not stated",
+                  !(tolower(trimws(value_final)) %in% JUNK)) |>
+    dplyr::select(id, value = value_final, evidence_base)
+}
+
+countries_long <- attr_ |>
+  dplyr::select(id, dplyr::all_of(COUNTRIES)) |>
+  tidyr::pivot_longer(-id, names_to = "country", values_to = "covered") |>
+  dplyr::filter(covered %in% TRUE) |>
+  dplyr::select(id, country)
+
+ta <- ledg |>
+  dplyr::filter(id %in% tiers$id[tiers$analytic]) |>
+  dplyr::transmute(id, text = tolower(paste(title, dplyr::coalesce(abstract, ""))))
+n_map <- NROW(ta)
+```
+
+`r n_junk` extracted values were the literal schema instruction ("free text")
+rather than a value. They are dropped from everything below and reported here
+because a prompt defect that silently becomes data is worse than one that is
+counted.
+
+# The map proper: conflict type by country
+
+Marginal counts say how much research exists. They do not say **what is
+studied where**, which is what a reader planning work in Libya actually needs.
+Every cell below is printed, including the zeros — that is the point of the
+table.
+
+```{r conflict-matrix}
+ct <- val("conflict_type") |> dplyr::inner_join(countries_long, by = "id")
+ct_mat <- ct |>
+  dplyr::count(value, country) |>
+  tidyr::pivot_wider(names_from = country, values_from = n, values_fill = 0L) |>
+  dplyr::mutate(total = rowSums(dplyr::across(dplyr::any_of(COUNTRIES)))) |>
+  dplyr::arrange(dplyr::desc(total))
+# Force every country column to exist even if no study populated it.
+for (cn in setdiff(COUNTRIES, names(ct_mat))) ct_mat[[cn]] <- 0L
+ct_mat <- ct_mat |> dplyr::select(conflict_type = value, dplyr::all_of(COUNTRIES), total)
+knitr::kable(ct_mat, caption = "Conflict type by country. Counts are study-country pairs; a study spanning three countries appears in three columns.")
+save_tab(ct_mat, "07b_conflict_by_country")
+```
+
+```{r conflict-zeros}
+zeros <- ct_mat |>
+  tidyr::pivot_longer(dplyr::all_of(COUNTRIES), names_to = "country", values_to = "n") |>
+  dplyr::filter(n == 0)
+n_cells <- NROW(ct_mat) * length(COUNTRIES)
+```
+
+**`r NROW(zeros)` of `r n_cells` conflict-type × country cells are empty**
+(`r sprintf("%.0f%%", 100 * NROW(zeros) / n_cells)`), and the occupied cells
+are highly uneven: the largest holds `r max(ct_mat$total)` study-country pairs
+while `r sum(ct_mat$total <= 2)` of the `r NROW(ct_mat)` conflict types have
+two or fewer across the whole region.
+
+```{r conflict-asymmetry}
+# Types documented in one country and absent in a neighbour. Restricted to
+# types with enough studies overall that absence is informative rather than a
+# reflection of the type being rare everywhere.
+asym <- ct_mat |>
+  dplyr::filter(total >= 5) |>
+  tidyr::pivot_longer(dplyr::all_of(COUNTRIES), names_to = "country", values_to = "n") |>
+  dplyr::group_by(conflict_type) |>
+  dplyr::filter(any(n == 0) & any(n >= 3)) |>
+  dplyr::summarise(
+    studied_in = paste(sprintf("%s (%d)", country[n >= 3], n[n >= 3]), collapse = ", "),
+    absent_in  = paste(country[n == 0], collapse = ", "),
+    .groups = "drop")
+knitr::kable(asym, caption = "Conflict types documented in at least one country and wholly absent in another")
+save_tab(asym, "07b_conflict_asymmetry")
+```
+
+These asymmetries are the map's most actionable output **and its most
+treacherous**. An ecologically implausible absence — a conflict type well
+documented in Tunisia and absent in Algeria, which share the same Atlas
+systems, fauna and farming — is far more likely to reflect our search than the
+ecology. Each row is a research question, not a conclusion.
+
+```{r fig-conflict-matrix, fig.width=8, fig.height=5}
+p <- ct |> dplyr::count(value, country) |>
+  tidyr::complete(value, country = COUNTRIES, fill = list(n = 0L)) |>
+  ggplot(aes(x = country, y = reorder(value, n, sum), fill = n)) +
+  geom_tile(colour = "white", linewidth = 0.6) +
+  geom_text(aes(label = n, colour = n > 12), size = 3.2, show.legend = FALSE) +
+  scale_fill_gradient(low = "#F7F7F7", high = OKABE[5], name = "studies") +
+  scale_colour_manual(values = c("grey25", "white")) +
+  labs(x = NULL, y = NULL, title = "What is studied where",
+       subtitle = sprintf("%d of %d cells are empty", NROW(zeros), n_cells)) +
+  theme_minimal(base_size = 11) + theme(panel.grid = element_blank())
+save_fig(p, "07b_conflict_by_country", 8, 5)
+```
+
+# Species with documented conflict and zero studies
+
+```{r species-zero}
+sp_ext <- val("species_common") |> dplyr::select(id, sp = value)
+
+ref <- SPECIES_REFERENCE |>
+  dplyr::rowwise() |>
+  dplyr::mutate(
+    pat = species_pattern(scientific),
+    ids = list(unique(c(
+      ta$id[grepl(pat, ta$text)],
+      sp_ext$id[grepl(pat, tolower(sp_ext$sp))])))) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(studies = lengths(ids))
+
+ref_tbl <- ref |>
+  dplyr::select(scientific, common, conflict_context, studies) |>
+  dplyr::arrange(studies, scientific)
+knitr::kable(ref_tbl, caption = "The eleven taxa the protocol named as plausibly involved in regional conflict, frozen before the search ran")
+save_tab(ref_tbl, "07b_species_reference_coverage")
+zero_sp <- ref_tbl |> dplyr::filter(studies == 0)
+thin_sp <- ref_tbl |> dplyr::filter(studies > 0, studies <= 3)
+```
+
+This reference set is **pre-specified**: it is the eleven binomials written
+into the search string in Module 01, before any record was retrieved. The
+search actively looked for every one of them, so a species with no studies is
+one the search sought and did not find — not one we noticed was missing after
+the fact.
+
+`r if (NROW(zero_sp)) sprintf("**%d of the eleven have zero studies: %s.**", NROW(zero_sp), paste(sprintf("_%s_ (%s)", zero_sp$scientific, zero_sp$common), collapse = ", ")) else "**Every one of the eleven has at least one study**, which is itself a result: the protocol's a priori conflict taxa are all represented, so the gaps in this map are gaps of depth rather than of coverage."`
+
+`r if (NROW(thin_sp)) sprintf("A further %d are represented by three studies or fewer: %s. At that depth a single additional study would materially change what is known.", NROW(thin_sp), paste(sprintf("_%s_ (%s, n=%d)", thin_sp$scientific, thin_sp$common, thin_sp$studies), collapse = ", ")) else ""`
+
+```{r species-country}
+# Every reference taxon must appear, including the ones with no studies at
+# all: a species that drops out of the join is precisely the finding this
+# table exists to report. Built by completing against the full reference set
+# rather than by joining and hoping.
+sp_country <- ref |>
+  dplyr::select(scientific, common, ids) |>
+  tidyr::unnest(ids, keep_empty = TRUE) |>
+  dplyr::rename(id = ids) |>
+  dplyr::left_join(countries_long, by = "id", relationship = "many-to-many") |>
+  dplyr::filter(!is.na(country)) |>
+  dplyr::count(scientific, common, country) |>
+  tidyr::complete(tidyr::nesting(scientific, common), country = COUNTRIES,
+                  fill = list(n = 0L)) |>
+  tidyr::pivot_wider(names_from = country, values_from = n, values_fill = 0L) |>
+  dplyr::right_join(SPECIES_REFERENCE |> dplyr::select(scientific, common),
+                    by = c("scientific", "common")) |>
+  dplyr::mutate(dplyr::across(dplyr::any_of(COUNTRIES), ~ tidyr::replace_na(.x, 0L)))
+for (cn in setdiff(COUNTRIES, names(sp_country))) sp_country[[cn]] <- 0L
+sp_country <- sp_country |>
+  dplyr::select(scientific, common, dplyr::all_of(COUNTRIES)) |>
+  dplyr::mutate(total = rowSums(dplyr::across(dplyr::all_of(COUNTRIES)))) |>
+  dplyr::arrange(dplyr::desc(total))
+stopifnot(NROW(sp_country) == NROW(SPECIES_REFERENCE))
+knitr::kable(sp_country, caption = "Reference taxa by country: the species-level evidence map, zeros included")
+save_tab(sp_country, "07b_species_by_country")
+
+sp_zero_cells <- sum(sp_country |> dplyr::select(dplyr::all_of(COUNTRIES)) == 0)
+```
+
+**`r sp_zero_cells` of `r NROW(sp_country) * length(COUNTRIES)` species ×
+country cells are empty.** For taxa the protocol itself flagged as regionally
+conflict-prone, that is the sharpest statement of the gap this map can make.
+
+# Did anything work? The mitigation evidence
+
+```{r mitigation-core}
+mo  <- val("mitigation_outcome_measured")
+od  <- val("outcome_direction")
+mt  <- val("mitigation_type")
+mtd <- val("mitigation_tested")
+n_measured <- sum(mo$value == "yes")
+```
+
+```{r mitigation-funnel}
+funnel <- tibble::tibble(
+  stage = c("studies in the map",
+            "state whether a mitigation was tested",
+            "a mitigation was tested",
+            "state whether its outcome was measured",
+            "outcome was measured",
+            "report a direction of effect"),
+  n = c(n_map, NROW(mtd), sum(mtd$value == "yes"), NROW(mo), n_measured,
+        sum(od$value != "not measured")))
+knitr::kable(funnel, caption = "The intervention-evidence funnel")
+save_tab(funnel, "07b_mitigation_funnel")
+```
+
+```{r outcome-direction}
+dir_tbl <- od |> dplyr::count(value, sort = TRUE) |>
+  dplyr::rename(outcome_direction = value, studies = n)
+knitr::kable(dir_tbl, caption = "Direction of effect, where a direction was reported")
+save_tab(dir_tbl, "07b_outcome_direction")
+n_reduced <- sum(od$value == "reduced conflict")
+n_notmeas <- sum(od$value == "not measured")
+```
+
+Of the `r NROW(od)` studies that reported an outcome direction at all,
+**`r n_notmeas` say the outcome was not measured** and `r n_reduced` report
+reduced conflict, against `r sum(od$value == "increased conflict")` reporting
+increased conflict and `r sum(od$value == "mixed")` mixed.
+
+**Read the `r n_reduced` "reduced conflict" results with care.** They are not
+`r n_reduced` demonstrations that something works. Nothing here distinguishes a
+controlled evaluation from an author stating that a measure helped, and
+positive results are far likelier to be written up than null ones. What the
+map can defend is the *shape* of the funnel: interventions are described far
+more often than they are evaluated.
+
+```{r mitigation-what}
+mt_tbl <- mt |>
+  dplyr::mutate(value = dplyr::if_else(nchar(value) > 90,
+                                       paste0(substr(value, 1, 87), "..."), value)) |>
+  dplyr::arrange(value) |>
+  dplyr::select(mitigation = value, evidence_base)
+knitr::kable(mt_tbl, caption = "Every mitigation described in the corpus, as extracted")
+save_tab(mt_tbl, "07b_mitigations_described")
+```
+
+This table is the corpus's practical content: turtle excluder devices,
+acoustic pingers on nets, swordfish buoy gear replacing driftnets, barn-owl
+nest boxes as rodent control, zinc phosphide and aluminium phosphide rodent
+campaigns, bird netting and scarers, fenced enclosures, dog vaccination,
+protected-area establishment. **`r NROW(mt)` distinct interventions across
+`r n_map` studies**, most described once.
+
+```{r mitigation-by-type}
+mit_ct <- mo |> dplyr::filter(value == "yes") |>
+  dplyr::inner_join(val("conflict_type") |> dplyr::select(id, ctype = value), by = "id") |>
+  dplyr::count(ctype, name = "outcome_measured") |>
+  dplyr::full_join(val("conflict_type") |> dplyr::count(value, name = "studies"),
+                   by = c("ctype" = "value")) |>
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~ tidyr::replace_na(.x, 0)),
+                outcome_measured = as.integer(outcome_measured),
+                pct = round(100 * outcome_measured / pmax(studies, 1), 1)) |>
+  dplyr::arrange(dplyr::desc(studies))
+knitr::kable(mit_ct, caption = "Which conflict types have any evaluated intervention behind them")
+save_tab(mit_ct, "07b_mitigation_by_conflict_type")
+```
+
+# What damage has actually been quantified
+
+```{r damage}
+de <- val("damage_estimate")
+knitr::kable(de |> dplyr::select(damage_estimate = value, evidence_base),
+             caption = "Every quantified damage or mortality estimate in the corpus")
+save_tab(de |> dplyr::select(damage_estimate = value, evidence_base), "07b_damage_estimates")
+```
+
+`r NROW(de)` of `r n_map` studies (`r sprintf("%.0f%%", 100 * NROW(de) / n_map)`)
+report a quantified damage or mortality figure. They are heterogeneous by
+nature — annual turtle mortality, percentage crop loss by date cultivar,
+vulture deaths across 26 countries, monetary loss in dollars — and **must not
+be pooled**. No common denominator exists across them, and constructing one
+would invent a comparability the literature does not have. They are listed
+individually because that is the only honest presentation.
+
+# Method mix
+
+```{r method-mix}
+if ("study_design" %in% unreliable) {
+  cat("study_design fell below the reliability floor (cross-model",
+      rel$cross_model[rel$field == "study_design"],
+      ") and is excluded from the headline analysis.\n")
+}
+mm <- tibble::tibble(
+  approach = c("reports a quantified damage or mortality estimate",
+               "tests a mitigation",
+               "measures a mitigation outcome",
+               "reports stakeholder engagement"),
+  studies = c(NROW(de), sum(mtd$value == "yes"), n_measured,
+              sum(val("stakeholder_engagement")$value == "yes")),
+  denominator = n_map) |>
+  dplyr::mutate(pct = round(100 * studies / denominator, 1))
+knitr::kable(mm, caption = "What kind of work this corpus contains")
+save_tab(mm, "07b_method_mix")
+```
+
+`r if ("study_design" %in% unreliable) sprintf("The protocol asked for perception work versus quantified damage measurement versus intervention evaluation. The **study_design** field cannot support that split: cross-model agreement was %.3f, below the %.2f floor, so it is excluded. The table above substitutes measures built from fields that did clear the floor, and the perception-versus-measurement contrast the protocol wanted is therefore **not available** — it is a casualty of the reliability threshold, and reporting it anyway would mean using a field we have already declared unreliable.", rel$cross_model[rel$field == "study_design"], FIELD_RELIABILITY_MIN) else ""`
+
+# What this section adds to the map
+
+- The corpus is **overwhelmingly marine**, and its single largest conflict type
+  is fisheries bycatch. Terrestrial conflict — the crop and livestock damage
+  that dominates lived experience across the Maghreb — is comparatively thin,
+  and **livestock depredation is nearly absent** despite jackal, wolf and
+  hyaena predation being live regional issues.
+- **`r sprintf("%.0f%%", 100 * NROW(zeros) / n_cells)` of conflict-type ×
+  country cells are empty**, and `r sp_zero_cells` of
+  `r NROW(sp_country) * length(COUNTRIES)` species × country cells.
+- **Interventions are described far more often than evaluated.** Of the
+  corpus, `r n_measured` studies measured a mitigation outcome.
+- Whether these holes are absences of research or absences of *English-indexed,
+  retrievable* research cannot be settled from inside this map. The francophone
+  qualifier applies to every terrestrial Maghreb gap above.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

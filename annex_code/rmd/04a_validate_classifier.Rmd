@@ -1,0 +1,150 @@
+---
+title: "Module 04a — Ensemble classifier validation on SYNERGY"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr); library(ggplot2)
+})
+source(here::here("R", "config.R"))
+```
+
+# Why this module is load-bearing
+
+The whole automated evidence map depends on one measured claim:
+**how well the ensemble discriminates relevant from irrelevant records
+when it is told the criteria it should apply.** Without a benchmark
+number, "the classifier said so" is not evidence. With one, downstream
+counts inherit a known error profile.
+
+This module runs the *exact* ensemble, prompt template shape, and
+decision rule the real corpus classification (Module 04b) will use, on
+an external labelled benchmark whose ground truth was fixed before we
+existed. If ensemble sensitivity does not reach `TARGET_RECALL = 0.95`,
+Module 04b is not permitted to run without explicit re-calibration.
+
+# Scope of the current run
+
+The full protocol calls for 3–5 datasets × 3 prompt polarities × the
+ensemble × N_RUNS_PER_ITEM per record, which on a 16 GB Apple Silicon
+Mac serving models sequentially works out to ~30 hours of compute. The
+current run is the framework proof:
+
+```{r scope-table, echo=FALSE}
+data.frame(
+  parameter    = c("Datasets", "Records per dataset (stratified)",
+                   "Prompt polarities", "Ensemble models",
+                   "Runs per (model, record)", "Total inferences",
+                   "Compute budget"),
+  value        = c("Bannach-Brown_2019 (14% prevalence)",
+                   "200",
+                   "affirmative only",
+                   "gemma4:e4b + llama3:latest",
+                   "2 (self-consistency at temperature 0)",
+                   "800",
+                   "~1 hour")
+)
+```
+
+Scaling to full protocol is a config flip in `R/run_validation.R`:
+edit `DATASETS`, `POLARITIES`, `N_SAMPLE`. Cache is content-hashed by
+`(model, polarity, record_id, run_idx)`, so re-runs skip work already
+done.
+
+**Known limitation of this proof.** Bannach-Brown_2019's 14% prevalence
+is higher than our expected ~5% HWC prevalence; low-prevalence
+regimes are where screeners fail worst. Full run will add
+low-prevalence datasets (Bos_2018 at 0.2%, van_de_Schoot_2018 at 0.6%,
+Muthu_2022 at 2.6%). Nagtegaal_2019 was deferred because its ID CSV
+requires the SYNERGY `compose.py` string-patcher against Harvard
+Dataverse rather than a direct OpenAlex ID lookup.
+
+# Results (reads cache; classifier is not re-run)
+
+```{r read-preds}
+pred_path    <- here::here(DIR_DERIVED, "validation_predictions.rds")
+metrics_path <- here::here(DIR_DERIVED, "validation_metrics.rds")
+stopifnot(file.exists(pred_path), file.exists(metrics_path))
+preds   <- readRDS(pred_path)
+metrics <- readRDS(metrics_path)
+```
+
+```{r headline-metrics}
+knitr::kable(metrics, digits = 3,
+             caption = "Ensemble (union rule) metrics on SYNERGY benchmark")
+```
+
+```{r confusion-plot, fig.width=6, fig.height=4}
+cm_long <- preds |>
+  dplyr::mutate(cell = dplyr::case_when(
+    label == 1 & pred        ~ "TP",
+    label == 1 & !pred       ~ "FN",
+    label == 0 & pred        ~ "FP",
+    label == 0 & !pred       ~ "TN"
+  )) |>
+  dplyr::count(dataset, polarity, cell)
+ggplot(cm_long, aes(x = cell, y = n, fill = cell)) +
+  geom_col() +
+  facet_grid(polarity ~ dataset) +
+  labs(x = NULL, y = "records",
+       title = "Confusion matrix — ensemble vs SYNERGY gold labels") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+# TARGET_RECALL check
+
+```{r target-check, results='asis'}
+row <- metrics |> dplyr::filter(dataset == "Bannach-Brown_2019")
+if (NROW(row) && !is.na(row$sensitivity)) {
+  pass <- row$sensitivity >= TARGET_RECALL
+  cat(sprintf("- TARGET_RECALL = %.2f\n", TARGET_RECALL))
+  cat(sprintf("- Measured sensitivity on Bannach-Brown_2019 = %.3f\n", row$sensitivity))
+  cat(sprintf("- Measured specificity = %.3f\n", row$specificity))
+  cat(sprintf("- **%s**\n", ifelse(pass,
+    "PASS — ensemble may proceed to Module 04b on the HWC corpus.",
+    "FAIL — Module 04b is BLOCKED. Re-calibrate rule or ensemble.")))
+} else {
+  cat("Metrics not yet available.\n")
+}
+```
+
+# Per-model diagnostics
+
+```{r per-model}
+# Read each per-record cache and reduce to per-model prediction (any run True -> include).
+inf_dir <- here::here("cache", "inference")
+if (dir.exists(inf_dir)) {
+  files <- list.files(inf_dir, full.names = TRUE)
+  n_cache_files <- length(files)
+  cat(sprintf("Cached inference calls: %d\n", n_cache_files))
+} else {
+  cat("Inference cache empty.\n")
+}
+```
+
+# What the numbers mean, plainly
+
+Sensitivity is the fraction of *actually-relevant* records the ensemble
+called relevant. That is what governs how many real HWC papers we
+would miss if we deployed this ensemble on the 65,820-record dedup
+ledger. Specificity is the price we pay in noise the classifier lets
+through — it will be poor by design because the union rule maximises
+recall.
+
+Cohen's κ collapses in low-prevalence regimes even when performance is
+good; MCC and Gwet's AC1 are reported alongside so the reader can see
+past that collapse.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

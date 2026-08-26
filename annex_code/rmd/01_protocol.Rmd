@@ -1,0 +1,156 @@
+---
+title: "Module 01 — Eligibility protocol (written and frozen before searching)"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+library(here)
+source(here::here("R", "config.R"))
+source(here::here("R", "eligibility.R"))
+```
+
+# What this document is, and why it is committed before Module 02
+
+An evidence map's defensibility rests on the fact that its inclusion rules
+were **written before the corpus existed**. Any rule invented mid-screening
+is a rule tuned to the data. This document is the pre-registration: it is
+committed to git before `02_search.Rmd` is executed, and any subsequent edit
+is a dated amendment with a stated reason.
+
+Every rule below is also present in `R/eligibility.R`, a machine-readable
+copy that Module 04b sources directly into the classifier prompts. There is
+one source of truth; the two files cannot drift.
+
+```{r design-statement, results='asis', echo=FALSE}
+cat("> **Design:** ", ELIGIBILITY$design, "\n", sep = "")
+```
+
+# PCC framework
+
+We use JBI's Population–Concept–Context frame, which is the standard for
+scoping-family reviews and evidence maps.
+
+```{r pcc, echo=FALSE}
+pcc <- ELIGIBILITY$pcc
+data.frame(
+  element = c("Population", "Concept", "Context (countries)", "Context (realms)"),
+  content = c(
+    pcc$population,
+    paste(pcc$concept, collapse = ", "),
+    paste(pcc$context$countries, collapse = ", "),
+    paste0("terrestrial = ", pcc$context$terrestrial,
+           "; marine = ",     pcc$context$marine)
+  )
+)
+```
+
+# Inclusion criteria
+
+A record must satisfy **every** clause to be included.
+
+```{r include, echo=FALSE}
+knitr::kable(data.frame(`#` = seq_along(ELIGIBILITY$include),
+                        clause = ELIGIBILITY$include),
+             check.names = FALSE)
+```
+
+# Exclusion criteria
+
+A record is excluded if **any** clause applies.
+
+```{r exclude, echo=FALSE}
+knitr::kable(data.frame(`#` = seq_along(ELIGIBILITY$exclude),
+                        clause = ELIGIBILITY$exclude),
+             check.names = FALSE)
+```
+
+# Borderline case rules
+
+These are the six cases the protocol names as ambiguous. Each is decided
+here, not during classification, so that ambiguity converts into
+consistent-but-imperfect noise instead of drifting rule application.
+
+The verdicts are:
+
+```{r borderline, echo=FALSE, results='asis'}
+for (nm in names(ELIGIBILITY$borderline)) {
+  b <- ELIGIBILITY$borderline[[nm]]
+  cat("## ", gsub("_", " ", nm), "\n\n", sep = "")
+  cat("**Verdict:** ", b$verdict, "\n\n", sep = "")
+  cat("**Rule:** ", b$rule, "\n\n", sep = "")
+  cat("**Rationale:** ", b$rationale, "\n\n---\n\n", sep = "")
+}
+```
+
+# Language, date, geography
+
+```{r bounds, echo=FALSE}
+data.frame(
+  parameter = c("Earliest publication year",
+                "Languages searched (no machine translation)",
+                "Countries",
+                "Realms"),
+  value = c(
+    as.character(ELIGIBILITY$year_from),
+    paste(ELIGIBILITY$languages, collapse = ", "),
+    paste(ELIGIBILITY$pcc$context$countries, collapse = ", "),
+    paste0("terrestrial + marine (marine kept because Mediterranean bycatch is a documented HWC issue for Gulf of Gabès sea turtles and Mediterranean monk seals)")
+  )
+)
+```
+
+Arabic-language search yield is expected to be low. **Low yield is an
+indexing finding, not evidence of absent research** — it will be reported as
+such rather than treated as an empirical count.
+
+# Grey literature
+
+```{r grey, echo=FALSE, results='asis'}
+g <- ELIGIBILITY$grey_literature
+cat("- **Included:** ", g$include, "\n", sep = "")
+cat("- **Stratum rule:** ", g$stratum_rule, "\n", sep = "")
+```
+
+# Traceability into downstream modules
+
+The eligibility list in `R/eligibility.R` is consumed unmodified by:
+
+- **`04b_classify.Rmd`** — the six borderline rules are interpolated
+  verbatim into the classification prompt for both ensemble models.
+- **`06_extract.Rmd`** — the inclusion/exclusion clauses become the
+  "eligibility_reason" enum for the primary_reason field.
+- **`09_outputs.Rmd`** — the design statement appears verbatim in the
+  methods paragraph.
+
+There is no re-typing, and no free-text version of the criteria maintained
+anywhere else in the codebase. Grepping the repo for a criterion phrase
+must return exactly one authoring location.
+
+# Amendments log
+
+Amendments to the protocol after this document is committed must appear as
+dated entries below, each stating the change, the reason, and the commit
+hash where it landed. Silent edits are a protocol violation.
+
+- **2026-08-11** — Removed direct Unpaywall dependency from the stack.
+  Reason: OpenAlex ingests Unpaywall OA data on every work record
+  (`best_oa_location.pdf_url`), making the direct dependency redundant.
+  Commit: `84feb99`.
+- **2026-08-11** — Substituted `mlx_lm.server` (planned) with Ollama
+  (actually available on the target machine). Ensemble is now
+  `gemma4:e4b` (Gemma family) plus `llama3:latest` (Llama family), served
+  sequentially at 16 GB unified memory. Reason: match the actual local
+  toolchain; preserve the "genuinely different training lineages"
+  requirement. Commit: `84feb99`.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

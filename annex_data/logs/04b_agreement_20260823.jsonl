@@ -1,0 +1,4 @@
+{"event":"agreement","n_compared":61150,"raw_agreement":0.9925,"kappa":0.3722,"pabak":0.985,"contested":459,"self_consistency":{"gemma4:e4b":1,"llama3:latest":1},"when":"2026-08-23 18:05:02"} 
+{"event":"agreement","n_compared":60952,"raw_agreement":0.9929,"kappa":0.3433,"pabak":0.9858,"contested":434,"self_consistency":{"gemma4:e4b":1,"llama3:latest":1},"when":"2026-08-23 18:08:24"} 
+{"event":"agreement","n_compared":60952,"raw_agreement":0.9929,"kappa":0.3433,"pabak":0.9858,"contested":434,"self_consistency":{"gemma4:e4b":1,"llama3:latest":1},"when":"2026-08-23 18:12:32"} 
+{"event":"agreement","n_compared":60952,"raw_agreement":0.9929,"kappa":0.3433,"pabak":0.9858,"contested":434,"self_consistency":{"gemma4:e4b":1,"llama3:latest":1},"when":"2026-08-23 19:04:21"} 

@@ -1,0 +1,10 @@
+id,claim,source_checked,verdict,action
+M1,"citation probe: ensemble not used, census not sample","run_citation_probe.R L161-172,201-202","CONFIRMED — code applies grepl() string test to all 8,464; ensemble never invoked","correction is right, submitted text was wrong"
+M2,"reliability gate is min of three measures, not two",run_extract.R L315-317,"CONFIRMED — pmin() over grounding, self_consist, cross_model",correction is right; reliability_rule_check.csv shows 5/19 fields differ
+M3,grounding 0.930-1.000 is over positive claims only,extraction_evidence_trail.csv,CONFIRMED — 0.043-1.000 over all stated values,both denominators now named in text
+M4,negative probe: 65 -> 39 flagged -> 3 candidates,negative_probe*.csv,CONFIRMED — 65 rows; 39 TRUE; stage2 tested=TRUE n=3; queue=3 rows,4.6% upper bound reconciles exactly
+M5,agricultural denominator narrows spread 29.6 -> 16.3,denominators_extended.csv,"CONFIRMED — all values exact (17.4%, 8.7%, 184.8, 29.6, 16.3)",summary sentence CORRECTED: Algeria not last under every denominator
+M6,benchmark is out-of-domain (preclinical neuropathology),manuscript + benchmark source,CONFIRMED — caveat is accurate and material,accepted as written
+M7,pipeline = model inference + deterministic filters,"run_geoverify.R, dedup scripts","CONFIRMED — gate, paratext filter, CrossRef audit are coded rules",accepted as written
+audit,"claim audit 45/47 MATCH, 2 MISMATCH",claim_audit.csv,"RESOLVED — 'not measured' (n=43, outcome_direction) counted as stated by pipeline, excluded by earlier pass","pipeline definition adopted: 2,379 stated, grounding 80.2% not 81.7%"
+R4 #6/#20,249/262 (95.0%) affiliation resolution,authorship.rds,PARTLY — 249/262 is AUTHOR NAME resolution; affiliation COUNTRY resolves for 207/262 (79.0%),manuscript now states 207 (79.0%) as the denominator for authorship percentages

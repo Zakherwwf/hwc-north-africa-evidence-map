@@ -1,0 +1,36 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘digest’ was built under R version 4.4.3 
+4: package ‘readr’ was built under R version 4.4.3 
+Warning message:
+package ‘httr’ was built under R version 4.4.3 
+Criteria hash verified: e021124a22ce6e9d
+Ensemble: gemma4:e4b + llama3:latest
+Corpus: 61065 abstract-present, 4755 title-only (deferred stratum)
+  ...10000/61065 (0.4 min)
+  ...20000/61065 (0.9 min)
+  ...30000/61065 (1.5 min)
+  ...40000/61065 (2.1 min)
+  ...50000/61065 (2.7 min)
+  ...60000/61065 (3.3 min)
+
+=== REDUCE DONE ===
+# A tibble: 4 × 2
+  stratum                         n
+  <chr>                       <int>
+1 include                       550
+2 exclude                     60411
+3 unscreened_inference_failed   104
+4 unscreened_title_only        4755
+
+Includes: 550 / 60961 screened (0.90%)
+Records with incomplete vote coverage (<4 votes): 148
+Records carrying >=1 schema-constrained repaired vote: 9
+
+Wrote /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/classification_predictions.rds
+     /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/screening_strata.csv

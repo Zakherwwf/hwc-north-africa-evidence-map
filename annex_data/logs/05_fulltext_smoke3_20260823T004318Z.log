@@ -1,0 +1,42 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘httr’ was built under R version 4.4.3 
+2: package ‘pdftools’ was built under R version 4.4.3 
+3: package ‘xml2’ was built under R version 4.4.3 
+GROBID alive at http://localhost:8070
+Records to retrieve: 25
+  [10/25] 2.0 min elapsed, ETA 3.1 min
+  [20/25] 2.9 min elapsed, ETA 0.7 min
+
+=== MODULE 05: retrieval by country ===
+# A tibble: 6 × 7
+  country     n downloaded scanned   ocr   tei tei_pct
+  <chr>   <int>      <int>   <int> <int> <int>   <dbl>
+1 EG          8          3       0     0     3    37.5
+2 TN          6          4       0     0     4    66.7
+3 MA          5          3       0     0     3    60  
+4 REGION      3          2       0     0     2    66.7
+5 DZ          2          1       0     0     1    50  
+6 LY          1          0       0     0     0     0  
+
+=== failure reasons ===
+# A tibble: 4 × 2
+  failure_reason           n
+  <chr>                <int>
+1 http_403                 5
+2 landing_page_not_pdf     3
+3 publisher_blocked        3
+4 http_429                 1
+
+Full text as TEI: 13 / 25 (52.0%)
+Scanned PDFs needing OCR: 0 (OCR succeeded on 0)
+
+Wrote /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/retrieval_ledger.rds
+     /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/retrieval_by_country.csv

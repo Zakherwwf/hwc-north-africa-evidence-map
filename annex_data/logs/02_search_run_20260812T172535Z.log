@@ -1,0 +1,21 @@
+Waiting for OpenAlex rate limit to clear (polling every 90s, max 30 min)...
+  attempt 1: HTTP=429
+  attempt 2: HTTP=429
+  attempt 3: HTTP=429
+  attempt 4: HTTP=429
+curl: (28) Resolving timed out after 15005 milliseconds
+  attempt 5: HTTP=000
+  attempt 6: HTTP=200
+OpenAlex reachable again. Running search matrix...
+(eval):12: no matches found: data/raw/search/openalex__*.rds
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘tibble’ was built under R version 4.4.3 
+2: package ‘dplyr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘openalexR’ was built under R version 4.4.3 
+2: package ‘httr’ was built under R version 4.4.3 
+[1/16] openalex_en_TN  (language=en, country=Tunisia)

@@ -1,0 +1,11 @@
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+4: package ‘httr’ was built under R version 4.4.3 
+5: package ‘digest’ was built under R version 4.4.3 
+6: package ‘tidyr’ was built under R version 4.4.3 
+Warning message:
+package ‘xml2’ was built under R version 4.4.3 
+Attributing countries for 262 analytic records
+  [25/262] 7.0 min, ETA 66.4 min, 0 errors

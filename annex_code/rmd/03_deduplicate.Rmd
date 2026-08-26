@@ -1,0 +1,133 @@
+---
+title: "Module 03 — Deduplication (DOI exact + title/year Jaro-Winkler)"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(jsonlite)
+})
+source(here::here("R", "config.R"))
+```
+
+# What this module does
+
+Two passes, deterministic and reversible via the provenance columns.
+
+1. **PASS 1 — DOI exact match on normalised DOI.** Same DOI → same work.
+   Normalisation strips URL prefixes, lowercases, trims. Every merged
+   record's `provenance_cells` and `provenance_sources` list-columns keep
+   a full history of where each copy came from — nothing is lost.
+2. **PASS 2 — Jaro-Winkler ≥ 0.95 on normalised titles, blocked by
+   publication year ±1.** Applied only to the residue of records without
+   a DOI. Titles are ASCII-folded, lowercased, punctuation stripped,
+   leading articles dropped. Union-find within each year window.
+
+Merge policy: when a group has multiple records, the OpenAlex record is
+kept as canonical (richer metadata: abstract, is_oa, pdf_url,
+relevance_score); the CORE record is kept only when there is no OpenAlex
+alternative. Both cases preserve full provenance via the two list-columns.
+
+Every merge and every pass boundary is logged to `logs/03_dedup.jsonl`
+so the record arithmetic for the Module 08 flow diagram reconciles.
+
+```{r read}
+raw_path   <- here::here(DIR_DERIVED, "search_ledger.rds")
+dedup_path <- here::here(DIR_DERIVED, "dedup_ledger.rds")
+stopifnot(file.exists(raw_path), file.exists(dedup_path))
+raw    <- readRDS(raw_path)
+dedup  <- readRDS(dedup_path)
+```
+
+# Record arithmetic
+
+```{r arithmetic}
+tibble::tibble(
+  stage           = c("Raw ledger (Module 02 output)",
+                      "After Pass 1 (DOI exact)",
+                      "After Pass 2 (title + year)",
+                      "Deduplicated ledger (Module 03 output)"),
+  n               = c(NROW(raw),
+                      NA,   # filled in from log below
+                      NA,
+                      NROW(dedup)),
+  n_collapsed_here = c(0,
+                       NA, NA,
+                       NROW(raw) - NROW(dedup))
+) |> knitr::kable(caption = "Record loss ledger — every drop is a merge, not a deletion")
+```
+
+# Merge log summary
+
+```{r merge-log}
+log_path <- here::here(DIR_LOGS, "03_dedup.jsonl")
+if (file.exists(log_path)) {
+  lines <- readLines(log_path)
+  entries <- lapply(lines, jsonlite::fromJSON)
+  df <- dplyr::bind_rows(lapply(entries, as.data.frame))
+  knitr::kable(df)
+} else {
+  cat("No dedup log at:", log_path, "\n")
+}
+```
+
+# Source overlap
+
+Records that appeared in more than one source are the strongest evidence
+that CORE and OpenAlex are indexing genuinely different subsets.
+
+```{r overlap}
+overlap <- dedup |>
+  dplyr::mutate(n_sources = vapply(provenance_sources, length, integer(1))) |>
+  dplyr::count(n_sources, name = "n_records")
+knitr::kable(overlap, caption = "Sources per deduplicated record")
+```
+
+# Cell overlap distribution
+
+```{r cell-overlap}
+cell_ovl <- dedup |>
+  dplyr::mutate(n_cells = vapply(provenance_cells, length, integer(1))) |>
+  dplyr::count(n_cells, name = "n_records") |>
+  dplyr::arrange(dplyr::desc(n_records))
+knitr::kable(head(cell_ovl, 15),
+             caption = "How many search cells each unique record appeared in")
+```
+
+# Country attribution (from cell provenance)
+
+Deduped records carry the union of every cell they appeared in, so a
+paper that surfaced under both `openalex_en_TN` and `openalex_en_REGION`
+is credited to Tunisia. Records appearing in `_REGION` only are shelved
+to a "multi-country / regional" bucket for the map.
+
+```{r country-attribution}
+country_from_cells <- function(cells) {
+  codes <- unique(sub("^[a-z]+_[a-z]{2}_", "", unlist(cells)))
+  codes
+}
+dedup <- dedup |>
+  dplyr::mutate(
+    country_codes = lapply(provenance_cells, country_from_cells),
+    n_countries   = vapply(country_codes, length, integer(1))
+  )
+country_long <- dedup |>
+  dplyr::select(country_codes, n_merged) |>
+  tidyr::unnest(country_codes) |>
+  dplyr::count(country_codes, name = "n_records") |>
+  dplyr::arrange(dplyr::desc(n_records))
+knitr::kable(country_long,
+             caption = "Records attributed to each country (union across cells)")
+```
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

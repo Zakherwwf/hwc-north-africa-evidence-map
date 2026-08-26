@@ -1,0 +1,271 @@
+---
+title: "Module 04b — Screening the corpus, and how much the two models actually agreed"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr); library(ggplot2)
+})
+source(here::here("R", "config.R"))
+```
+
+```{r read}
+preds <- readRDS(here::here(DIR_DERIVED, "classification_predictions.rds"))
+strata <- readr::read_csv(here::here(DIR_DERIVED, "screening_strata.csv"),
+                          show_col_types = FALSE)
+agree <- readr::read_csv(here::here(DIR_TABLES, "04b_model_agreement.csv"),
+                         show_col_types = FALSE)
+contested <- readRDS(here::here(DIR_DERIVED, "contested_set.rds"))
+vmet <- readr::read_csv(here::here(DIR_DERIVED, "validation_metrics.csv"),
+                        show_col_types = FALSE)
+.a <- function(q) agree$value[agree$quantity == q]
+
+n_dedup    <- sum(strata$n)
+n_titleonly<- strata$n[strata$stratum == "unscreened_title_only"]
+n_failed   <- strata$n[strata$stratum == "unscreened_inference_failed"]
+n_screened <- sum(preds$screened %in% TRUE)
+n_include  <- strata$n[strata$stratum == "include"]
+```
+
+# What this module did
+
+Every deduplicated record with an abstract was classified by both ensemble
+models, `r N_RUNS_PER_ITEM` runs each at temperature `r OLLAMA_TEMPERATURE`,
+against the eligibility criteria frozen in Module 01. No sampling, no active
+learning, no stopping rule: a machine reads all of them, so the recall risk
+that justifies early termination in human screening does not exist here.
+
+The decision rule is `r DECISION_RULE` — include if any model in any run
+includes — chosen to maximise recall at known cost to precision.
+
+# Record arithmetic
+
+```{r arithmetic}
+knitr::kable(
+  strata |> dplyr::arrange(dplyr::desc(n)) |>
+    dplyr::mutate(pct = round(100 * n / n_dedup, 2)),
+  caption = sprintf("Disposition of all %s deduplicated records", format(n_dedup, big.mark = ",")))
+```
+
+Of `r format(n_dedup, big.mark = ",")` deduplicated records,
+`r format(n_screened, big.mark = ",")` were screened and
+**`r n_include` were included — `r sprintf("%.2f%%", 100 * n_include / n_screened)`
+of the screened corpus.** Two strata never reached a decision and must be
+carried forward as such rather than folded into the excludes.
+
+## The title-only stratum is the larger threat to recall
+
+`r format(n_titleonly, big.mark = ",")` records
+(`r sprintf("%.1f%%", 100 * n_titleonly / n_dedup)` of the corpus) have no
+abstract in the ledger and were **not screened at all.**
+
+This was a deliberate choice, and Module 04a is the reason: on the benchmark,
+restricting to abstract-present records lifted ensemble sensitivity from
+`r sprintf("%.3f", vmet$sensitivity[vmet$scope=="all" & vmet$polarity=="affirmative"])`
+to
+`r sprintf("%.3f", vmet$sensitivity[vmet$scope=="abstract_present" & vmet$polarity=="affirmative"])`.
+A title alone does not carry enough signal for these models to apply the
+criteria, and screening on titles would have injected error we could measure
+but not correct.
+
+The cost is that any relevant study sitting in those
+`r format(n_titleonly, big.mark = ",")` records is invisible to this map. That
+is not a rounding error, and Module 07 must not describe a thin cell as an
+absence without stating it. Records missing an abstract are not missing at
+random: older records, grey literature, non-English-language venues and
+smaller regional journals are all over-represented among them — which is the
+same material a North Africa evidence map is most at risk of under-counting.
+
+## Inference failures
+
+`r n_failed` records failed to return schema-valid JSON on every attempt, even
+after the repair pass. They are reported as `unscreened_inference_failed`
+rather than as excludes, because a record the classifier could not read is not
+a record the classifier rejected. At
+`r sprintf("%.2f%%", 100 * n_failed / n_screened)` of the corpus this stratum
+is small enough not to move any count, but it is reported for the same reason:
+a silent absorption into "exclude" is exactly the failure mode this pipeline is
+supposed to make impossible.
+
+# Self-consistency, and why the number is not impressive
+
+```{r selfc}
+sc <- agree |> dplyr::filter(grepl("^self-consistency", quantity))
+knitr::kable(sc |> dplyr::mutate(value = sprintf("%.4f", value)),
+             caption = "Agreement between run 1 and run 2 of the same model")
+```
+
+Both models agreed with themselves on
+`r sprintf("%.4f", min(sc$value))` of records — zero flips out of
+`r format(as.integer(.a("records scored by both models")), big.mark = ",")`.
+
+**Read this as a decoding property, not as evidence of stability.** Both runs
+use temperature `r OLLAMA_TEMPERATURE` and the same seed, and greedy decoding
+is deterministic: identical inputs must produce identical outputs. A value of
+1.00 here was guaranteed before any inference ran, and it measures nothing
+about robustness. The protocol asks for the number, so it is reported, and it
+is reported with this caveat every time it appears.
+
+Module 06 measures the thing this was meant to measure, by perturbing
+temperature between extraction runs so that the two runs can genuinely differ.
+
+# Inter-model agreement
+
+```{r agreement-table}
+# Counts and coefficients share one column, so format each to its own scale
+# rather than letting a single digits= setting print "115.0000".
+.fmt <- function(v) ifelse(v == round(v), format(v, big.mark = ",", trim = TRUE),
+                           sprintf("%.4f", v))
+knitr::kable(
+  agree |> dplyr::filter(!grepl("^self-consistency", quantity)) |>
+    dplyr::mutate(value = .fmt(value)),
+  caption = "Agreement between gemma4:e4b and llama3:latest (union within model)")
+```
+
+```{r agreement-numbers}
+raw_ag  <- .a("raw inter-model agreement")
+kap     <- .a("Cohen's kappa")
+pab     <- .a("PABAK")
+n_both  <- .a("both include")
+n_gemma <- .a("only gemma includes")
+n_llama <- .a("only llama includes")
+n_cont  <- .a("contested set size")
+```
+
+Raw agreement is `r sprintf("%.4f", raw_ag)`, which sounds excellent and is
+almost meaningless: at a positive rate of
+`r sprintf("%.2f%%", 100 * n_include / n_screened)` two models that both said
+"exclude" to everything would agree `r sprintf("%.2f%%", 100 * (1 - n_include / n_screened))`
+of the time. The chance-corrected figure is the one to read.
+
+**Cohen's κ = `r sprintf("%.3f", kap)`** — fair agreement at best, and far
+below what would be accepted from two human screeners. PABAK is
+`r sprintf("%.3f", pab)`, but PABAK is high here for the same arithmetic
+reason raw agreement is: it is dominated by the agreed-exclude cell. The
+honest summary is that **the two models agree overwhelmingly about what to
+throw away and disagree substantially about what to keep.**
+
+# The contested set is the finding of this module
+
+```{r contested-numbers}
+pct_cont <- 100 * n_cont / n_include
+```
+
+Of the `r n_include` records the ensemble included, only **`r n_both`
+(`r sprintf("%.1f%%", 100 * n_both / n_include)`) were included by both
+models.** The other `r n_cont` — **`r sprintf("%.1f%%", pct_cont)` of all
+includes** — rest on a single model's vote.
+
+```{r contested-by-model}
+knitr::kable(contested |> dplyr::count(included_by, name = "n_records"),
+             caption = "Which model pulled each contested record in")
+```
+
+`r n_gemma` includes come from gemma alone and `r n_llama` from llama alone, so
+the ensemble is substantially gemma's judgement with a llama-sized minority
+report attached.
+
+The protocol states the interpretation in advance: *a small contested set is
+evidence of a well-specified criterion, a large one is a warning about the
+criteria themselves.* At `r sprintf("%.0f%%", pct_cont)` this is a large
+contested set, and it is a warning.
+
+```{r contested-by-cell, fig.width=7, fig.height=4}
+cc <- contested |> dplyr::count(cell_country, name = "contested") |>
+  dplyr::arrange(dplyr::desc(contested))
+knitr::kable(cc, caption = "Contested records by search cell")
+
+p <- ggplot(cc, aes(x = reorder(cell_country, contested), y = contested)) +
+  geom_col(fill = "#CC6677") +
+  coord_flip() +
+  labs(x = NULL, y = "records included by exactly one model",
+       title = "The contested set by search cell",
+       subtitle = sprintf("%d of %d ensemble includes (%.0f%%) rest on one model's vote",
+                          n_cont, n_include, pct_cont)) +
+  theme_minimal(base_size = 11)
+print(p)
+dir.create(here::here(DIR_FIGURES), showWarnings = FALSE, recursive = TRUE)
+ggsave(here::here(DIR_FIGURES, "04b_contested_by_cell.png"), p, width = 7, height = 4, dpi = 300)
+ggsave(here::here(DIR_FIGURES, "04b_contested_by_cell.svg"), p, width = 7, height = 4)
+```
+
+# What the contested set predicted, and what happened next
+
+A large contested set predicts a noisy include set, and that is what Module 06
+stage 0 found when it checked where each included study was actually
+conducted.
+
+```{r geo-consequence}
+geo <- readRDS(here::here(DIR_DERIVED, "geography_verification.rds"))
+n_in_scope <- sum(geo$in_scope %in% TRUE)
+knitr::kable(geo |> dplyr::count(study_country, sort = TRUE),
+             caption = "Verified study location of the included records")
+```
+
+Only `r n_in_scope` of the `r NROW(geo)` includes
+(`r sprintf("%.1f%%", 100 * n_in_scope / NROW(geo))`) are actually situated in
+the five countries. That is the estimated screening precision on our own
+corpus, and it is close to the
+`r sprintf("%.2f", vmet$precision[vmet$scope=="abstract_present" & vmet$polarity=="affirmative"])`
+precision Module 04a measured on the benchmark — the two independent estimates
+agree, which is reassuring about the measurement even though the number itself
+is poor.
+
+**This is the union rule working as designed, not failing.** Specificity of
+`r sprintf("%.3f", vmet$specificity[vmet$scope=="abstract_present" & vmet$polarity=="affirmative"])`
+sounds strong, but at a true prevalence near
+`r sprintf("%.1f%%", 100 * n_include / n_screened)` even strong specificity
+produces more false positives than true ones. We chose that trade deliberately
+to protect recall, and Module 06 stage 0 is where the cost is paid back.
+
+# How much did we miss?
+
+```{r recall-ci}
+row <- vmet |> dplyr::filter(scope == "abstract_present", polarity == "affirmative")
+ci  <- binom.test(row$tp, row$tp + row$fn)$conf.int
+```
+
+Deployed sensitivity was `r sprintf("%.3f", row$sensitivity)` on the benchmark
+— but on **`r row$tp + row$fn` positive records only.** The exact 95%
+confidence interval for that estimate runs from
+`r sprintf("%.3f", ci[1])` to `r sprintf("%.3f", ci[2])`.
+
+So the defensible statement is not "we missed nothing". It is that the
+ensemble's sensitivity is **at least `r sprintf("%.0f%%", 100 * ci[1])` with
+95% confidence**, and that the point estimate rests on a very small number of
+positives. Applied to `r n_include` includes, a sensitivity as low as the
+interval's lower bound would imply on the order of
+`r round(n_include * (1 / ci[1] - 1))` relevant records missed among the
+screened corpus — before counting the
+`r format(n_titleonly, big.mark = ",")` never screened at all.
+
+Module 07 must quote the interval, not the point estimate.
+
+# Method parameters for the supplement
+
+```{r params, echo=FALSE}
+tibble::tibble(
+  parameter = c("Ensemble", "Decision rule", "Runs per (model, record)",
+                "Temperature", "Seed", "Polarity",
+                "Criteria hash (xxhash64 of the prompt criteria block)",
+                "Scope", "Cached inference calls"),
+  value = c(paste(ENSEMBLE_MODELS, collapse = " + "), DECISION_RULE,
+            as.character(N_RUNS_PER_ITEM), as.character(OLLAMA_TEMPERATURE),
+            as.character(OLLAMA_SEED), "affirmative (selected on benchmark, not on this corpus)",
+            "e021124a22ce6e9d", "abstract-present records only",
+            format(length(list.files(here::here(DIR_CACHE_INFERENCE))), big.mark = ","))
+) |> knitr::kable()
+```
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

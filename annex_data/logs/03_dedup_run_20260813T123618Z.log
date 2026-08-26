@@ -1,0 +1,15 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning message:
+package ‘dplyr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘tibble’ was built under R version 4.4.3 
+2: package ‘stringdist’ was built under R version 4.4.3 
+Loaded ledger: 95546 rows
+Pass 1 (DOI exact): 48633 unique DOI groups; 25640 no-DOI residue
+Pass 2 (title+year): 17187 residue clusters after title dedup
+Wrote deduped ledger: /Users/zakherfrogman/Documents/HWC Confereance/HWC North Africa paper review/data/derived/dedup_ledger.rds  (65820 rows)
+
+Elapsed: 998.8 s

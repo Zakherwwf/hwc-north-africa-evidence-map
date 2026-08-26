@@ -1,0 +1,12 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+Warning message:
+The 'yaml' package is required to parse dependencies within R Markdown files
+Consider installing it with `install.packages("yaml")`. 
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘httr’ was built under R version 4.4.3 
+3: package ‘digest’ was built under R version 4.4.3 
+Criteria hash verified: e021124a22ce6e9d
+Scanning cache for missing/failed votes across 61065 records...
+Votes needing repair: 498  across 156 records
+  [25/498] repaired 23, unrecoverable 2, elapsed 35.7 min (ETA 676.0 min)

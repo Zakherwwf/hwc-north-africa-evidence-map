@@ -1,0 +1,59 @@
+Warning messages:
+1: package ‘dplyr’ was built under R version 4.4.3 
+2: package ‘tibble’ was built under R version 4.4.3 
+3: package ‘readr’ was built under R version 4.4.3 
+4: package ‘purrr’ was built under R version 4.4.3 
+5: package ‘tidyr’ was built under R version 4.4.3 
+Warning messages:
+1: package ‘httr’ was built under R version 4.4.3 
+2: package ‘pdftools’ was built under R version 4.4.3 
+3: package ‘xml2’ was built under R version 4.4.3 
+Warning message:
+package ‘digest’ was built under R version 4.4.3 
+Analytic set: 262 records (121 with TEI)
+
+=== evidence base for the analytic set ===
+# A tibble: 6 × 3
+  evidence_base  text_source                      n
+  <chr>          <chr>                        <int>
+1 full_text      full_body_fallback               4
+2 full_text      full_body_fallback_truncated    13
+3 full_text      methods_results                 95
+4 full_text      methods_results_truncated        4
+5 none           too_short                        2
+6 title_abstract title_abstract                 144
+
+DROPPED 2 records with no usable text:
+                                id
+1 https://openalex.org/W4200213882
+2 https://openalex.org/W2341829960
+                                                          title
+1 6. Silenced by Power: Repression, Isolation &amp; Persecution
+2                            Vultures are Again in the City Sky
+Cross-model subset: 52 of 260 records
+Planned calls: 1716 (gemma4:e4b=1560, qwen2.5:7b=156)
+  [25/1716] 0.0 min, ETA 0.2 min, 0 errors
+  [50/1716] 0.0 min, ETA 0.1 min, 0 errors
+  [75/1716] 0.0 min, ETA 0.1 min, 0 errors
+  [100/1716] 0.0 min, ETA 0.1 min, 0 errors
+  [125/1716] 0.0 min, ETA 0.1 min, 0 errors
+  [150/1716] 0.0 min, ETA 0.1 min, 0 errors
+  [175/1716] 3.8 min, ETA 33.3 min, 0 errors
+  [200/1716] 10.7 min, ETA 81.2 min, 0 errors
+  [225/1716] 16.8 min, ETA 111.2 min, 0 errors
+  [250/1716] 23.3 min, ETA 136.7 min, 0 errors
+  [275/1716] 31.4 min, ETA 164.7 min, 0 errors
+  [300/1716] 38.0 min, ETA 179.6 min, 0 errors
+  [325/1716] 43.5 min, ETA 186.3 min, 0 errors
+  [350/1716] 52.7 min, ETA 205.6 min, 0 errors
+  [375/1716] 62.2 min, ETA 222.5 min, 0 errors
+  [400/1716] 67.2 min, ETA 221.2 min, 0 errors
+  [425/1716] 74.7 min, ETA 226.9 min, 0 errors
+  [450/1716] 81.5 min, ETA 229.2 min, 0 errors
+  [475/1716] 84.9 min, ETA 221.7 min, 0 errors
+  [500/1716] 88.2 min, ETA 214.6 min, 0 errors
+  [525/1716] 91.9 min, ETA 208.6 min, 0 errors
+  [550/1716] 97.6 min, ETA 207.0 min, 0 errors
+  [575/1716] 100.8 min, ETA 200.1 min, 0 errors
+  [600/1716] 104.0 min, ETA 193.4 min, 0 errors
+  [625/1716] 108.4 min, ETA 189.2 min, 0 errors

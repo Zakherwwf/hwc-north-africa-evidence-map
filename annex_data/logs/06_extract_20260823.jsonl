@@ -1,0 +1,13 @@
+{"event":"dropped_no_text","n":2,"ids":["https://openalex.org/W4200213882","https://openalex.org/W2341829960"],"when":"2026-08-23 17:41:35"} 
+{"event":"run_start","n_records":5,"n_calls":33,"model":"gemma4:e4b","xmodel":"qwen2.5:7b","num_ctx":8192,"max_chars":24000,"temp_main":0,"temp_probe":0.3,"when":"2026-08-23 17:41:35"} 
+{"event":"run_done","n_calls":33,"n_failed":0,"n_fields":95,"unreliable":["compensation_scheme_discussed","damage_estimate","damage_metric_reported","mitigation_outcome_measured","mitigation_tested","outcome_direction","study_design"],"grounding_overall":0.756,"when":"2026-08-23 17:47:00"} 
+{"event":"dropped_no_text","n":2,"ids":["https://openalex.org/W4200213882","https://openalex.org/W2341829960"],"when":"2026-08-23 17:48:30"} 
+{"event":"run_start","n_records":5,"n_calls":33,"model":"gemma4:e4b","xmodel":"qwen2.5:7b","num_ctx":8192,"max_chars":24000,"temp_main":0,"temp_probe":0.3,"when":"2026-08-23 17:48:30"} 
+{"event":"run_done","n_calls":33,"n_failed":0,"n_fields":95,"unreliable":["compensation_scheme_discussed","damage_estimate","damage_metric_reported","funding_source","mitigation_outcome_measured","mitigation_tested","mitigation_type","outcome_direction","stakeholder_engagement","study_design"],"n_positive":32,"grounding_overall":1,"when":"2026-08-23 17:48:31"} 
+{"event":"dropped_no_text","n":2,"ids":["https://openalex.org/W4200213882","https://openalex.org/W2341829960"],"when":"2026-08-23 17:48:46"} 
+{"event":"run_start","n_records":260,"n_calls":1716,"model":"gemma4:e4b","xmodel":"qwen2.5:7b","num_ctx":8192,"max_chars":24000,"temp_main":0,"temp_probe":0.3,"when":"2026-08-23 17:48:46"} 
+{"event":"dropped_no_text","n":2,"ids":["https://openalex.org/W4200213882","https://openalex.org/W2341829960"],"when":"2026-08-23 18:24:17"} 
+{"event":"run_start","n_records":260,"n_calls":1716,"model":"gemma4:e4b","xmodel":"qwen2.5:7b","num_ctx":8192,"max_chars":24000,"temp_main":0,"temp_probe":0.3,"when":"2026-08-23 18:24:17"} 
+{"event":"dropped_no_text","n":2,"ids":["https://openalex.org/W4200213882","https://openalex.org/W2341829960"],"when":"2026-08-23 23:42:11"} 
+{"event":"run_start","n_records":260,"n_calls":1716,"model":"gemma4:e4b","xmodel":"qwen2.5:7b","num_ctx":8192,"max_chars":24000,"temp_main":0,"temp_probe":0.3,"when":"2026-08-23 23:42:11"} 
+{"event":"run_done","n_calls":1716,"n_failed":0,"n_fields":4940,"unreliable":["damage_metric_reported","compensation_scheme_discussed","study_design","subnational_region","species_scientific"],"n_positive":1957,"grounding_overall":0.956,"when":"2026-08-24 03:19:34"} 

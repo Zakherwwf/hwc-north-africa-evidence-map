@@ -1,0 +1,1 @@
+{"event":"reduce_done","ensemble":["gemma4:e4b","llama3:latest"],"polarity":"affirmative","criteria_hash":"e021124a22ce6e9d","n_abstract_present":61065,"n_title_only":4755,"n_include":550,"n_exclude":60411,"n_unscreened":104,"n_incomplete_coverage":148,"n_records_with_repaired_votes":9,"when":"2026-08-23 00:33:50"} 

@@ -1,0 +1,8 @@
+{"event":"run_start","n_seed":254,"n_ledger":65815,"when":"2026-08-23 18:42:29"} 
+{"event":"run_done","n_pool":9560,"n_have":555,"n_new":8464,"n_loose":6,"n_strict":1,"credits_used":207,"when":"2026-08-23 18:46:30"} 
+{"event":"run_start","n_seed":254,"n_ledger":65815,"when":"2026-08-23 18:52:56"} 
+{"event":"run_done","n_pool":9560,"n_have":555,"n_new":8464,"n_loose":6,"n_strict":1,"sens_loose":0.244,"sens_strict":0.217,"est_strict":5,"est_strict_lo":0,"est_strict_hi":26,"credits_used":0,"when":"2026-08-23 18:53:08"} 
+{"event":"run_start","n_seed":254,"n_ledger":65815,"when":"2026-08-23 18:53:39"} 
+{"event":"run_done","n_pool":9560,"n_have":555,"n_new":8464,"n_loose":6,"n_strict":1,"sens_loose":0.244,"sens_strict":0.217,"est_strict":5,"est_strict_lo":0,"est_strict_hi":26,"credits_used":0,"when":"2026-08-23 18:53:50"} 
+{"event":"run_start","n_seed":254,"n_ledger":65815,"when":"2026-08-23 19:06:47"} 
+{"event":"run_done","n_pool":9560,"n_have":555,"n_new":8464,"n_loose":6,"n_strict":1,"sens_loose":0.244,"sens_strict":0.217,"est_strict":5,"est_strict_lo":0,"est_strict_hi":26,"credits_used":0,"when":"2026-08-23 19:06:57"} 

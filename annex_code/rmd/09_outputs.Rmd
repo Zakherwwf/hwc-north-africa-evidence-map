@@ -1,0 +1,365 @@
+---
+title: "Module 09 — Abstract, poster plan, and the methods paragraph"
+author: "HWC North Africa automated evidence map"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, dpi = 300)
+suppressPackageStartupMessages({
+  library(here); library(dplyr); library(tibble); library(readr); library(tidyr)
+})
+source(here::here("R", "config.R"))
+```
+
+```{r read}
+flow   <- readr::read_csv(here::here(DIR_DERIVED, "record_flow.csv"), show_col_types = FALSE)
+geo_n  <- readr::read_csv(here::here(DIR_TABLES, "07_studies_normalised.csv"), show_col_types = FALSE)
+ranks  <- readr::read_csv(here::here(DIR_TABLES, "07_robustness_ranks.csv"), show_col_types = FALSE)
+eq     <- readr::read_csv(here::here(DIR_TABLES, "07_authorship_equity.csv"), show_col_types = FALSE)
+agree  <- readr::read_csv(here::here(DIR_TABLES, "04b_model_agreement.csv"), show_col_types = FALSE)
+vmet   <- readr::read_csv(here::here(DIR_DERIVED, "validation_metrics.csv"), show_col_types = FALSE)
+ret    <- readRDS(here::here(DIR_DERIVED, "retrieval_ledger.rds"))
+attr_  <- readRDS(here::here(DIR_DERIVED, "country_attribution.rds"))
+probe  <- readRDS(here::here(DIR_DERIVED, "citation_probe.rds"))
+tiers  <- readRDS(here::here(DIR_DERIVED, "geography_tiers.rds"))
+mmeta  <- readr::read_csv(here::here(DIR_DERIVED, "model_metadata.csv"), show_col_types = FALSE)
+.q <- function(m) mmeta$quantisation[mmeta$model == m]
+
+.a  <- function(q) agree$value[agree$quantity == q]
+dep <- vmet |> dplyr::filter(scope == "abstract_present", polarity == "affirmative")
+ci  <- binom.test(dep$tp, dep$tp + dep$fn)$conf.int
+
+n_retrieved <- flow$n[flow$step == 1]
+n_map       <- flow$n[flow$step == 7]
+n_ft        <- flow$n[flow$step == 8]
+n_include   <- flow$n[flow$step == 5]
+n_titleonly <- flow$removed[flow$step == 3]
+top <- geo_n |> dplyr::slice_max(studies, n = 1)
+bot <- geo_n |> dplyr::slice_min(studies, n = 1)
+area_ratio <- max(geo_n$per_100k_km2) / min(geo_n$per_100k_km2)
+n_unattr <- sum(!attr_$any_country %in% TRUE)
+first_pct <- eq$pct[eq$measure == "first author in-country"]
+tei_pct <- round(100 * mean(ret$tei_ok %in% TRUE), 1)
+
+man_path <- here::here(DIR_DERIVED, "extraction_manifest.rds")
+man <- if (file.exists(man_path)) readRDS(man_path) else NULL
+have_ext <- !is.null(man) && isTRUE(man$complete)
+
+# The mitigation-evaluation count: the most policy-relevant number in the
+# analysis, and only available once extraction completed. Read from the
+# resolved fields, counting only values that survived all four verification
+# gates. mitigation_outcome_measured cleared the reliability floor
+# (cross-model 0.750), so the number is reportable; if it had not, the
+# abstract would have to say the field was excluded rather than quote it.
+if (have_ext) {
+  ext_f <- readRDS(here::here(DIR_DERIVED, "extraction_fields.rds"))
+  rel_f <- readr::read_csv(here::here(DIR_TABLES, "extraction_reliability.csv"),
+                           show_col_types = FALSE)
+  mit_reliable <- isTRUE(rel_f$reliable[rel_f$field == "mitigation_outcome_measured"])
+  mit <- ext_f |> dplyr::filter(field == "mitigation_outcome_measured")
+  n_mit <- sum(mit$value_final %in% "yes"); n_mit_d <- NROW(mit)
+  mit_txt <- if (mit_reliable)
+    sprintf("Only %d of %d studies (%.0f%%) evaluated a mitigation with a measured outcome.",
+            n_mit, n_mit_d, 100 * n_mit / n_mit_d)
+  else "[mitigation field fell below the reliability floor and is not reported]"
+} else {
+  mit_txt <- ""
+  mit_reliable <- FALSE
+}
+
+# The zero-study taxa: the map's sharpest single result, and pre-specified in
+# the Module 01 search string, so it is not a gap noticed after seeing data.
+sp_cov_path <- here::here(DIR_TABLES, "07b_species_reference_coverage.csv")
+have_syn <- file.exists(sp_cov_path)
+if (have_syn) {
+  sp_cov  <- readr::read_csv(sp_cov_path, show_col_types = FALSE)
+  zero_sp <- sp_cov |> dplyr::filter(studies == 0)
+  ct_mat  <- readr::read_csv(here::here(DIR_TABLES, "07b_conflict_by_country.csv"),
+                             show_col_types = FALSE)
+  n_ct_zero <- sum(ct_mat |> dplyr::select(dplyr::any_of(COUNTRIES)) == 0)
+  n_ct_cell <- NROW(ct_mat) * length(COUNTRIES)
+  # Number-word for consistency with "eleven", and common names kept as
+  # stored: "African wolf" is a proper adjective and tolower() broke it.
+  .numword <- function(n) c("zero","one","two","three","four","five","six",
+                            "seven","eight","nine","ten","eleven")[n + 1]
+  sp_txt <- sprintf("%s of eleven a priori conflict taxa have no studies (%s); golden jackal has one.",
+                    tools::toTitleCase(.numword(NROW(zero_sp))),
+                    paste(zero_sp$common, collapse = ", "))
+} else {
+  sp_txt <- ""; n_ct_zero <- NA_integer_; n_ct_cell <- NA_integer_
+}
+```
+
+`r if (!have_ext) "> **Module 06 extraction is not complete.** The abstracts below are written from the strands that are final (geographic, temporal, indexing, authorship, classifier performance). The mitigation-evaluation count — normally the single most policy-relevant number on the poster — is marked as a gap to be filled and is not estimated. Nothing here is a placeholder number." else ""`
+
+# Abstract, 250 words
+
+```{r abstract-250, results='asis'}
+abs250 <- sprintf(
+"Across North Africa, people and wildlife share increasingly contested ground: wild boar in Tunisian farmland, jackals and hyaenas near livestock, sea turtles and cetaceans in Mediterranean fishing gear. Coexistence depends on knowing where conflict occurs and what has been tried; that research base has never been mapped.
+
+We built an automated evidence map of human-wildlife conflict and coexistence research in Algeria, Egypt, Libya, Morocco and Tunisia. %s records were retrieved from OpenAlex and CORE, deduplicated to %s, and screened by a two-model local ensemble (%s) under a union rule. Performance was validated on the external SYNERGY benchmark: sensitivity %.2f (95%% CI %.2f-%.2f), specificity %.2f. Every record's location was verified, leaving %d studies in the five countries.
+
+Research is unevenly distributed and the unevenness widens under normalisation. %s holds %d studies and %s %d; per unit land area the ratio reaches %.0f to one. %s Only %.0f%% of records yielded retrievable full text, worst for the country with fewest records. In-country first authorship stands at %.0f%%. %s
+
+Under five robustness variants no country ranks first consistently, but %s rank last consistently. We report where evidence is thinnest, not where it is richest.
+
+Automated synthesis makes regional evidence maps feasible, and makes their limits measurable — which is what makes them usable.",
+  format(n_retrieved, big.mark = ","), format(flow$n[flow$step == 2], big.mark = ","),
+  paste(ENSEMBLE_MODELS, collapse = " + "),
+  dep$sensitivity, ci[1], ci[2], dep$specificity, n_map,
+  top$country, top$studies, bot$country, bot$studies, area_ratio, sp_txt,
+  tei_pct, first_pct, mit_txt,
+  paste(ranks$country[apply(ranks[-1], 1, function(r) all(r >= 4))], collapse = " and "))
+cat(abs250)
+```
+
+```{r wc250}
+.wc <- function(x) length(strsplit(trimws(gsub("\\s+", " ", x)), " ")[[1]])
+cat("word count:", .wc(abs250), "\n")
+```
+
+# Abstract, 300 words
+
+```{r abstract-300, results='asis'}
+abs300 <- sprintf(
+"Across North Africa, people and wildlife share increasingly contested ground: wild boar in Tunisian farmland, jackals and striped hyaenas near livestock, sea turtles and cetaceans drowning in Mediterranean fishing gear. Coexistence depends on knowing where conflict occurs, which species are involved, and what has been tried. That research base has never been mapped.
+
+We built an automated evidence map of human-wildlife conflict and coexistence research in Algeria, Egypt, Libya, Morocco and Tunisia. %s records were retrieved from OpenAlex and CORE, deduplicated to %s, and screened by a two-model local ensemble (%s) under a union rule chosen to maximise recall. No human reviewer screened records. Classifier performance was measured on the external SYNERGY benchmark before any application to our corpus: sensitivity %.2f (95%% CI %.2f-%.2f, %d positives), specificity %.2f. Because low-prevalence screening yields false positives despite high specificity, every record's location was verified, reducing %d includes to %d studies in scope.
+
+Research is unevenly distributed, and normalisation widens the gap. %s holds %d studies against %s's %d; per unit land area the ratio reaches %.0f to one, since the thinnest countries are the largest. Per capita the ordering inverts, so we report all three denominators. %s Only %.0f%% yielded retrievable full text, poorest for the country returning fewest records. In-country first authorship stands at %.0f%%. %s
+
+Under five robustness variants no country ranks first consistently; %s rank last consistently. We report where evidence is thinnest, the claim the data supports.
+
+Automated synthesis makes regional evidence maps feasible where none existed, and makes their limits measurable - which is what makes a map usable rather than fast.",
+  format(n_retrieved, big.mark = ","), format(flow$n[flow$step == 2], big.mark = ","),
+  paste(ENSEMBLE_MODELS, collapse = " + "),
+  dep$sensitivity, ci[1], ci[2], dep$tp + dep$fn, dep$specificity,
+  n_include, n_map,
+  top$country, top$studies, bot$country, bot$studies, area_ratio, sp_txt,
+  tei_pct, first_pct, mit_txt,
+  paste(ranks$country[apply(ranks[-1], 1, function(r) all(r >= 4))], collapse = " and "))
+cat(abs300)
+```
+
+```{r wc300}
+cat("word count:", .wc(abs300), "\n")
+
+# Conference word limits are enforced, so they are asserted here. Every number
+# in these abstracts is interpolated from the analysis, which means a change
+# upstream can silently push the text over the limit; this fails the knit
+# instead.
+stopifnot(.wc(abs250) <= 250, .wc(abs300) <= 300)
+dir.create(here::here(DIR_OUTPUT), showWarnings = FALSE, recursive = TRUE)
+writeLines(c("=== 250-WORD ABSTRACT ===", abs250, "", "=== 300-WORD ABSTRACT ===", abs300),
+           here::here(DIR_OUTPUT, "abstracts.txt"))
+```
+
+# The methods paragraph on automated components
+
+This is the paragraph that separates a defensible automated study from an
+indefensible one. The final sentence is verbatim as specified and must not be
+softened or omitted.
+
+```{r methods-para, results='asis'}
+methods <- sprintf(
+"Screening and data extraction were performed by a local two-model ensemble served through Ollama: %s (%s, %s) and %s (%s, %s), at temperature %d with fixed seed %d and a schema-constrained JSON response format. Records were classified under a union decision rule (include if any model in any run included) with %d runs per model per record. The eligibility criteria were frozen before searching and passed verbatim into the prompt; the criteria block is hashed (xxhash64 e021124a22ce6e9d) and the hash is asserted at every run. Prompt polarity was selected on benchmark data, not on our corpus: three logically equivalent phrasings (affirmative inclusion, antonymic exclusion, predicate negation) were compared on the SYNERGY benchmark dataset Bannach-Brown_2019, and the affirmative phrasing restricted to abstract-present records was deployed. That configuration achieved sensitivity %.3f (exact 95%% CI %.3f-%.3f on %d positive records) and specificity %.3f, with precision %.3f. Inter-model agreement on our corpus was Cohen's kappa %.3f (raw agreement %.4f); %d of %d included records rested on a single model's vote. Extraction was schema-constrained to the methods and results sections of GROBID-produced TEI where full text was obtainable and to title and abstract otherwise, with the evidence base recorded per value. %s All prompts, model names, quantisation, temperatures and seeds are reported in the supplementary material.
+
+All classification and extraction were performed by automated systems; no human reviewer screened records or extracted data. Classifier performance was validated against external labelled benchmarks prior to application, and all extracted fields were verified by verbatim quote-matching against source text. Performance metrics are reported in full; fields falling below reliability thresholds were excluded from analysis.",
+  ENSEMBLE_MODELS[1], mmeta$parameter_size[mmeta$model == ENSEMBLE_MODELS[1]], .q(ENSEMBLE_MODELS[1]),
+  ENSEMBLE_MODELS[2], mmeta$parameter_size[mmeta$model == ENSEMBLE_MODELS[2]], .q(ENSEMBLE_MODELS[2]),
+  OLLAMA_TEMPERATURE, OLLAMA_SEED,
+  N_RUNS_PER_ITEM,
+  dep$sensitivity, ci[1], ci[2], dep$tp + dep$fn, dep$specificity, dep$precision,
+  .a("Cohen's kappa"), .a("raw inter-model agreement"),
+  .a("contested set size"), n_include,
+  if (have_ext) "Every non-null extracted value carried a verbatim evidence quote that was string-matched back against the source text; values whose quote could not be found were set to missing and the per-field grounding rate is reported as a directly measured hallucination rate." else "[QUOTE-GROUNDING RATE PENDING — Module 06 extraction incomplete]")
+cat(methods)
+writeLines(methods, here::here(DIR_OUTPUT, "methods_paragraph.txt"))
+```
+
+```{r model-params}
+knitr::kable(mmeta |> dplyr::select(model, family, parameter_size, quantisation,
+                                    context_length, temperature, seed, role),
+             caption = "Model method parameters, read from the serving runtime")
+```
+
+The two ensemble models are **not quantised the same way** —
+`r ENSEMBLE_MODELS[1]` is `r .q(ENSEMBLE_MODELS[1])` and
+`r ENSEMBLE_MODELS[2]` is `r .q(ENSEMBLE_MODELS[2])`. Both are 4-bit, but
+writing "both 4-bit quantised" would describe a configuration that was never
+run, and quantisation is a method parameter the protocol requires exactly. The
+values above are read from Ollama at knit time rather than typed.
+
+```{r deviations}
+dev <- tibble::tibble(
+  deviation = c(
+    "Citation chasing not performed",
+    "French and Arabic search returned 2 and 0 records",
+    "Title-only records not screened",
+    "qwen2.5:7b dropped from the ensemble",
+    "Extraction run 2 uses temperature 0.3, not 0",
+    "Geographic verification pass added after screening",
+    "Protocol robustness variants (a) and (c) are one test"),
+  consequence = c(
+    sprintf("Estimated %d in-scope works missed (95%% CI %d-%d), measured by a calibrated citation probe in Module 02b",
+            round(probe$estimate$estimate[2]), round(probe$estimate$ci_lo[2]),
+            round(probe$estimate$ci_hi[2])),
+    "Evidence gaps are gaps in English-indexed literature; francophone Maghreb research is systematically under-represented",
+    sprintf("%s records never judged; not missing at random (older, grey, regional venues)",
+            format(n_titleonly, big.mark = ",")),
+    "Leave-one-out ablation showed identical confusion matrices; qwen added 5 includes on the real corpus, all out of scope",
+    "Temperature 0 with a fixed seed is deterministic, so a temperature-0 pair would report self-consistency 1.00 by construction and measure nothing",
+    sprintf("Screening precision on our own corpus was %.1f%%; the pass is a correction, and its removals are reported",
+            100 * flow$n[flow$step == 6] / flow$n[flow$step == 5]),
+    "A contested record is by definition one exactly one model included, so excluding contested records IS the intersection rule"))
+knitr::kable(dev, caption = "Protocol deviations, each with its measured consequence")
+readr::write_csv(dev, here::here(DIR_TABLES, "09_protocol_deviations.csv"))
+```
+
+# A0 portrait poster plan
+
+**Core message.** *Where the evidence isn't is the finding — and an automated
+map can prove its own blind spots.*
+
+Three columns, under 400 words of body text.
+
+```{r poster-plan}
+poster <- tibble::tribble(
+  ~column, ~block, ~content,
+  1, "Title + core message", "One line: the coexistence problem, then the claim.",
+  1, "Why a map, not a review", "60 words: distributional claims survive symmetric classifier noise; boundary claims do not.",
+  1, "Figure 1", "08_record_flow — the full cascade, with DEFERRED distinguished from EXCLUDED.",
+  1, "Method box", "The mandated automation sentence, verbatim, in full view.",
+  2, "Figure 2", "07_geographic_distribution — three panels: raw, per area, per capita.",
+  2, "The gap", "80 words: the ratio, and which denominator changes the ordering.",
+  2, "Figure 3", "05_retrieval_by_country — access inequality as a finding.",
+  2, "Figure 4", "07_year_by_country — temporal, with the indexing caveat stated.",
+  3, "Figure 5", "08_sensitivity_ci — our own validation, uncertainty included.",
+  3, "What survives robustness", "The rank table: no stable leader, a stable bottom.",
+  3, "What this means if you work here", "The practitioner box.",
+  3, "QR code", "Link to the deposited data, code and full reliability tables.")
+knitr::kable(poster, caption = "A0 portrait poster layout")
+readr::write_csv(poster, here::here(DIR_TABLES, "09_poster_plan.csv"))
+```
+
+**"What this means if you work here" box.**
+
+> If you work on human-wildlife conflict in Libya or Algeria, this map does not
+> tell you the problem is small there. It tells you almost nobody has published
+> on it in English, that we could not obtain full text for most of what does
+> exist, and that francophone work is largely invisible to a search like ours.
+> A single well-designed damage-quantification or mitigation-evaluation study
+> in either country would measurably change the regional evidence base. That is
+> unusual, and it is an argument for funding it.
+
+**Figure captions** are held in Module 08 and are written to be lifted verbatim.
+
+# The six closing questions
+
+**1. What is the single most defensible number?**
+`r sprintf("%.1f%%", tei_pct)` — the share of included records for which full
+text could be retrieved. It depends on no model judgement at all: a PDF either
+downloaded and parsed or it did not. Every other headline number inherits
+classifier error; this one is a mechanical fact about access.
+
+**2. Benchmark sensitivity and specificity, and how many studies did we miss?**
+Sensitivity `r sprintf("%.3f", dep$sensitivity)` (95% CI
+`r sprintf("%.3f", ci[1])`–`r sprintf("%.3f", ci[2])`, on
+`r dep$tp + dep$fn` positives), specificity
+`r sprintf("%.3f", dep$specificity)`. The point estimate implies zero missed;
+the interval does not. At the lower bound, screening
+`r format(flow$n[flow$step == 4], big.mark = ",")` records would have missed on
+the order of `r round(n_include * (1 / ci[1] - 1))` relevant records. Add
+`r format(n_titleonly, big.mark = ",")` title-only records never screened and
+an estimated `r round(probe$estimate$estimate[2])` works
+(CI `r round(probe$estimate$ci_lo[2])`–`r round(probe$estimate$ci_hi[2])`)
+that citation chasing would have added. **A defensible statement is
+"we missed on the order of tens to low hundreds of relevant records", not
+"we missed none".**
+
+**3. Which gaps are real, and which are artefacts?**
+
+```{r gaps-table}
+gaps <- tibble::tribble(
+  ~finding, ~verdict, ~basis,
+  "Libya and Algeria rank last on volume", "Robust to all five variants, but partly artefactual",
+    "Stable under every robustness variant, but the Libya search cell is the smallest AND worst-retrieved, and francophone Algerian work is invisible to an English search",
+  "Tunisia leads", "NOT a finding",
+    "No country ranks first under all variants; Tunisia falls to 2nd and 3rd under two of them",
+  "Libya is research-poor per capita", "NOT supported",
+    "Libya ranks 2nd of 5 per million people; only the area and raw denominators put it last",
+  "Full-text access is unequal by country", "Real",
+    "Mechanical retrieval outcome, no model judgement involved",
+  "Three a priori conflict taxa have zero studies", "Real gap, with the language caveat",
+    "African wolf, crested porcupine and fennec fox were written into the search string before retrieval and actively searched for; the search sought them and found nothing. All three are terrestrial, which is where francophone coverage bites hardest",
+  "Livestock depredation has one study region-wide", "Real gap, near-certainly understated",
+    "Jackal, wolf and hyaena predation is a live regional issue; one study across five countries is not a plausible complete picture, and the francophone qualifier applies with full force",
+  "Zero French or Arabic records", "Artefact, definitively",
+    "The non-English term blocks were far narrower and the Latin binomials sat in an English-filtered cell; this is a search-construction fact, not a fact about the literature")
+knitr::kable(gaps, caption = "Real gaps versus artefacts")
+readr::write_csv(gaps, here::here(DIR_TABLES, "09_gaps_vs_artefacts.csv"))
+```
+
+**4. Which findings survived all robustness variants?**
+The bottom of the ranking survived: `r paste(ranks$country[apply(ranks[-1], 1, function(r) all(r >= 4))], collapse = " and ")`
+rank in the bottom two under every variant. The top did not: no country ranks
+first under all of them. The intersection rule removes
+`r sprintf("%.0f%%", 100 * (1 - 73 / n_map))` of the evidence base, which is
+the honest measure of how much this map depends on its decision rule.
+
+**5. Three sentences a hostile reviewer would use, and the honest answers.**
+
+> *"You had no human oversight, so you cannot know your included set is right."*
+
+Correct, and we do not claim it is. We claim a measured error profile:
+sensitivity `r sprintf("%.2f", dep$sensitivity)` (CI
+`r sprintf("%.2f", ci[1])`–`r sprintf("%.2f", ci[2])`) and specificity
+`r sprintf("%.2f", dep$specificity)` on an external benchmark whose labels
+predate this study, plus an independent verification pass that found
+`r sprintf("%.0f%%", 100 - 100 * flow$n[flow$step == 6] / flow$n[flow$step == 5])`
+of includes were out of region and removed them. The answer rests on those
+numbers, not on assurance.
+
+> *"Your two models agreed at kappa `r sprintf("%.2f", .a("Cohen's kappa"))`. Two human screeners at that level would be sent back to retrain."*
+
+Also correct, and it is why `r .a("contested set size")` of
+`r n_include` includes are flagged as resting on one model's vote, why every
+headline is recomputed with them removed, and why the intersection variant is
+reported even though it removes most of the corpus. A large contested set is a
+warning about the criteria, and we report it as one rather than burying it.
+
+> *"You searched in English and concluded North African research is thin."*
+
+We concluded that *English-indexed* research is thin, and the manuscript says
+so at every point the claim appears. The French cells returned 2 records and
+the Arabic cells none — from term blocks far narrower than the English ones,
+which is a defect in our search, not a finding about the literature. This is
+the study's most serious limitation and it is stated, not hedged.
+
+**6. Weakest points in the pipeline.**
+
+1. **The search string.** `r sum(readRDS(here::here(DIR_DERIVED, "geography_tiers.rds"))$analytic)`-record
+   analytic set, of which 42% were returned by exactly one search cell. Three
+   narrow blocks AND-ed together, with citation chasing never implemented.
+2. **Non-English coverage.** Effectively zero, from a design that intended three languages.
+3. **The 13-positive benchmark.** Every sensitivity claim rests on it. More
+   datasets, especially low-prevalence ones, were specified and not run.
+4. **Union rule at 0.9% prevalence.** Produced an include set that was
+   `r sprintf("%.0f%%", 100 - 100 * flow$n[flow$step == 6] / flow$n[flow$step == 5])`
+   out of region and needed a corrective pass that was not in the protocol.
+5. **Title-only exclusion.** `r format(n_titleonly, big.mark = ",")` records
+   never judged, and not missing at random.
+6. **Single-model geography and country attribution.** Both gates that shape
+   the entire map run on one model with no ensemble and no benchmark.
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```

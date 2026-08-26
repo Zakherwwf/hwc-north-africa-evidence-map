@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='590.40pt' height='576.00pt' viewBox='0 0 590.40 576.00'>
+<g class='svglite'>
+<defs>
+  <style type='text/css'><![CDATA[
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+    }
+    .svglite g.glyphgroup path {
+      fill: inherit;
+      stroke: none;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<defs>
+  <clipPath id='cpMC4wMHw1OTAuNDB8MC4wMHw1NzYuMDA='>
+    <rect x='0.00' y='0.00' width='590.40' height='576.00' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw1OTAuNDB8MC4wMHw1NzYuMDA=)'>
+<rect x='0.00' y='0.00' width='590.40' height='576.00' style='stroke-width: 0.00; stroke: none;' />
+</g>
+<defs>
+  <clipPath id='cpMC4wMHw1OTAuNDB8MzEuNTF8NTc2LjAw'>
+    <rect x='0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' y='31.51' width='590.40' height='544.49' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw1OTAuNDB8MzEuNTF8NTc2LjAw)'>
+<rect x='33.38' y='68.13' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='129.17' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='190.22' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='251.26' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='312.30' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='373.34' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='434.38' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<rect x='33.38' y='495.42' width='202.91' height='43.95' style='stroke-width: 0.85; stroke: #404040; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFFFFF;' />
+<text x='134.84' y='87.70' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='185.94px' lengthAdjust='spacingAndGlyphs'>Records retrieved (OpenAlex + CORE, all cells)</text>
+<text x='134.84' y='98.82' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='41.94px' lengthAdjust='spacingAndGlyphs'>n = 95,546</text>
+<text x='134.84' y='148.75' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='73.05px' lengthAdjust='spacingAndGlyphs'>After deduplication</text>
+<text x='134.84' y='159.86' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='41.94px' lengthAdjust='spacingAndGlyphs'>n = 65,820</text>
+<text x='134.84' y='209.79' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='150.00px' lengthAdjust='spacingAndGlyphs'>Abstract present, eligible for screening</text>
+<text x='134.84' y='220.90' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='41.94px' lengthAdjust='spacingAndGlyphs'>n = 61,065</text>
+<text x='134.84' y='270.83' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='104.92px' lengthAdjust='spacingAndGlyphs'>Screened by the ensemble</text>
+<text x='134.84' y='281.94' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='41.94px' lengthAdjust='spacingAndGlyphs'>n = 60,961</text>
+<text x='134.84' y='331.87' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='147.58px' lengthAdjust='spacingAndGlyphs'>Included by the ensemble (union rule)</text>
+<text x='134.84' y='342.99' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='29.67px' lengthAdjust='spacingAndGlyphs'>n = 550</text>
+<text x='134.84' y='392.91' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='150.50px' lengthAdjust='spacingAndGlyphs'>Verified as located in the five countries</text>
+<text x='134.84' y='404.03' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='29.67px' lengthAdjust='spacingAndGlyphs'>n = 266</text>
+<text x='134.84' y='453.95' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='116.64px' lengthAdjust='spacingAndGlyphs'>Analytic set (study types only)</text>
+<text x='134.84' y='465.07' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='29.67px' lengthAdjust='spacingAndGlyphs'>n = 262</text>
+<text x='134.84' y='515.00' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='137.22px' lengthAdjust='spacingAndGlyphs'>Analytic set with retrievable full text</text>
+<text x='134.84' y='526.11' text-anchor='middle' style='font-size: 8.82px; font-family: "Arial";' textLength='29.67px' lengthAdjust='spacingAndGlyphs'>n = 121</text>
+<line x1='134.84' y1='112.08' x2='134.84' y2='129.17' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,125.25 134.84,129.17 137.10,125.25 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='173.12' x2='134.84' y2='190.22' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,186.29 134.84,190.22 137.10,186.29 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='234.17' x2='134.84' y2='251.26' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,247.33 134.84,251.26 137.10,247.33 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='295.21' x2='134.84' y2='312.30' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,308.37 134.84,312.30 137.10,308.37 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='356.25' x2='134.84' y2='373.34' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,369.41 134.84,373.34 137.10,369.41 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='417.29' x2='134.84' y2='434.38' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,430.46 134.84,434.38 137.10,430.46 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<line x1='134.84' y1='478.33' x2='134.84' y2='495.42' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt;' />
+<polygon points='132.57,491.50 134.84,495.42 137.10,491.50 ' style='stroke-width: 0.75; stroke: #404040; stroke-linecap: butt; fill: #404040;' />
+<text x='252.65' y='123.38' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='118.77px' lengthAdjust='spacingAndGlyphs'>−29,726  duplicate records merged</text>
+<text x='252.65' y='184.42' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='160.08px' lengthAdjust='spacingAndGlyphs'>−4,755  no abstract: DEFERRED, not excluded</text>
+<text x='252.65' y='245.46' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='227.00px' lengthAdjust='spacingAndGlyphs'>−104  inference failed on every attempt: DEFERRED, not excluded</text>
+<text x='252.65' y='306.50' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='147.58px' lengthAdjust='spacingAndGlyphs'>−60,411  judged not eligible by both models</text>
+<text x='252.65' y='367.54' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='133.23px' lengthAdjust='spacingAndGlyphs'>−284  located outside the five countries</text>
+<text x='252.65' y='428.58' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='167.34px' lengthAdjust='spacingAndGlyphs'>−4  not a study (paratext, editorial) by record type</text>
+<text x='252.65' y='489.63' style='font-size: 7.68px;fill: #4D4D4D; font-family: "Arial";' textLength='139.64px' lengthAdjust='spacingAndGlyphs'>−141  no open-access full text obtainable</text>
+</g>
+<g clip-path='url(#cpMC4wMHw1OTAuNDB8MC4wMHw1NzYuMDA=)'>
+<text x='0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' y='29.62' style='font-size: 9.00px;fill: #595959; font-family: "Arial";' textLength='318.50px' lengthAdjust='spacingAndGlyphs'>Not a PRISMA-ScR diagram: no human reviewer screened records at any stage</text>
+<text x='0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' y='14.93' style='font-size: 13.20px; font-weight: bold; font-family: "Arial";' textLength='164.09px' lengthAdjust='spacingAndGlyphs'>Evidence-map record flow</text>
+</g>
+</g>
+</svg>

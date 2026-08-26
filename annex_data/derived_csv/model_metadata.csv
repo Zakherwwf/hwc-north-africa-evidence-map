@@ -1,0 +1,4 @@
+model,family,parameter_size,quantisation,context_length,size_gb,modified,role,temperature,seed,served_by
+qwen2.5:7b,qwen2,7.6B,Q4_K_M,32768,4.68,2026-08-13T19:47:32.129946945+01:00,extraction cross-model check (20% subsample); dropped from screening ensemble 2026-08-22,0,42,ollama
+gemma4:e4b,gemma4,8.0B,Q4_K_M,NA,9.61,2026-04-06T17:00:16.444591362+01:00,screening ensemble; geography gate; country attribution; extraction (primary),0,42,ollama
+llama3:latest,llama,8.0B,Q4_0,8192,4.66,2026-01-08T09:58:06.35310266+01:00,screening ensemble,0,42,ollama

@@ -1,0 +1,3 @@
+{"event":"run_start","n":262,"model":"gemma4:e4b","when":"2026-08-23 18:26:59"} 
+{"event":"run_start","n":262,"model":"gemma4:e4b","when":"2026-08-23 18:38:12"} 
+{"event":"run_done","n":262,"n_errors":0,"any_country":203,"counts":{"Tunisia":81,"Morocco":76,"Egypt":75,"Algeria":47,"Libya":31},"when":"2026-08-23 19:45:04"} 
